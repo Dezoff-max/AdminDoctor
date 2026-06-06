@@ -25,7 +25,29 @@ struct AdminDocApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        bringAdminDocForward()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            self.bringAdminDocForward()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.bringAdminDocForward()
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        bringAdminDocForward()
+        return true
+    }
+
+    private func bringAdminDocForward() {
         NSApp.setActivationPolicy(.regular)
+        NSApp.unhide(nil)
+
+        if let window = NSApp.windows.first(where: { $0.canBecomeMain }) {
+            window.makeKeyAndOrderFront(nil)
+        }
+
         NSApp.activate(ignoringOtherApps: true)
     }
 }

@@ -19,9 +19,10 @@ ICON_SCRIPT="$ROOT_DIR/script/generate_icons.sh"
 
 cd "$ROOT_DIR"
 
-if [[ "$MODE" != "--bundle-only" && "$MODE" != "bundle" ]]; then
-  pkill -x "$APP_NAME" >/dev/null 2>&1 || true
-fi
+mkdir -p "$DIST_DIR"
+pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+find "$DIST_DIR" -maxdepth 1 -type d -name "$APP_NAME [0-9]*.app" -prune -exec rm -rf {} +
+find "$DIST_DIR" -maxdepth 1 -type f -name "$APP_NAME [0-9]*.dmg" -delete
 
 if [[ ! -f "$APP_ICON_SOURCE" ]]; then
   bash "$ICON_SCRIPT"
@@ -61,6 +62,10 @@ cat >"$INFO_PLIST" <<PLIST
 </dict>
 </plist>
 PLIST
+
+/usr/bin/xattr -cr "$APP_BUNDLE" 2>/dev/null || true
+/usr/bin/xattr -dr com.apple.provenance "$APP_BUNDLE" 2>/dev/null || true
+/usr/bin/xattr -dr "com.apple.fileprovider.fpfs#P" "$APP_BUNDLE" 2>/dev/null || true
 
 open_app() {
   /usr/bin/open -n "$APP_BUNDLE"

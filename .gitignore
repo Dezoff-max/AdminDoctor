@@ -6,5 +6,6 @@ dist/
 *.xcuserdata/
 *.xcuserstate
 Resources/Icons/*.png
+!Resources/Icons/AdminDocIconSource.png
 Resources/Icons/*.icns
 Resources/Icons/*.iconset/

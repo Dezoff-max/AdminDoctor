@@ -28,6 +28,8 @@ public struct AdminPrivilegeState: Codable, Equatable, Sendable {
 }
 
 public final class AdminPrivilegeManager: @unchecked Sendable {
+    private static let adminRightName = "system.privilege.admin"
+
     private let now: @Sendable () -> Date
     private let lock = NSLock()
     private var authorization: AuthorizationRef?
@@ -66,7 +68,7 @@ public final class AdminPrivilegeManager: @unchecked Sendable {
             .preAuthorize
         ]
 
-        let status = kAuthorizationRightExecute.withCString { rightName in
+        let status = Self.adminRightName.withCString { rightName in
             kAuthorizationEnvironmentPrompt.withCString { promptName in
                 prompt.withCString { promptValue in
                     var right = AuthorizationItem(

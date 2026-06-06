@@ -7,13 +7,8 @@ SOURCE_ICON="$ICON_ROOT/AdminDocIconSource.png"
 APP_ICONSET="$ICON_ROOT/AppIcon.iconset"
 DMG_ICONSET="$ICON_ROOT/DMGIcon.iconset"
 RENDER_SCRIPT="$ROOT_DIR/script/render_icon.swift"
-FORCE=0
 
-if [[ "${1:-}" == "--force" ]]; then
-  FORCE=1
-fi
-
-if [[ "$FORCE" == "1" || ! -f "$SOURCE_ICON" ]]; then
+if [[ ! -f "$SOURCE_ICON" ]]; then
   /usr/bin/swift "$RENDER_SCRIPT" "$SOURCE_ICON" >/dev/null
 fi
 

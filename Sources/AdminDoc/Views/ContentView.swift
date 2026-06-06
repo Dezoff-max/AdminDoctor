@@ -73,10 +73,14 @@ struct ContentView: View {
             }
         }
         .task {
+            bringWindowForward()
+            try? await Task.sleep(nanoseconds: 500_000_000)
             await store.requestAdminPrivilegesAtLaunch()
+            bringWindowForward()
             if store.results.isEmpty {
                 await store.runDiagnostics()
             }
+            bringWindowForward()
         }
         .alert("Export failed", isPresented: Binding(
             get: { store.exportError != nil },
@@ -109,5 +113,17 @@ struct ContentView: View {
         } catch {
             store.exportError = error.localizedDescription
         }
+    }
+
+    @MainActor
+    private func bringWindowForward() {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.unhide(nil)
+
+        if let window = NSApp.windows.first(where: { $0.canBecomeMain }) {
+            window.makeKeyAndOrderFront(nil)
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
     }
 }

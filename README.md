@@ -122,7 +122,7 @@ Regenerate icons and build a local DMG:
 ./script/build_dmg.sh
 ```
 
-The app and DMG icons are generated locally from `script/render_icon.swift`; binary icon outputs are intentionally ignored by git.
+The app and DMG icons are generated locally from `Resources/Icons/AdminDocIconSource.png`. `script/render_icon.swift` is a fallback source generator if the PNG is missing; generated `.icns` and `.iconset` outputs are intentionally ignored by git.
 
 The Codex app Run button is wired through `.codex/environments/environment.toml`.
 
