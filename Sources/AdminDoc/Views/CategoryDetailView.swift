@@ -7,6 +7,14 @@ struct CategoryDetailView: View {
     let isRunning: Bool
     let lastRunDate: Date?
     let totalSummary: (fail: Int, warning: Int, pass: Int, info: Int)
+    let cleanupSnapshot: CleanupSnapshot?
+    @Binding var selectedCleanupIDs: Set<UUID>
+    let isScanningCleanup: Bool
+    let isCleaning: Bool
+    let cleanupError: String?
+    let cleanupNotice: String?
+    let scanCleanup: () -> Void
+    let moveSelectedCleanupItemsToTrash: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,16 +27,32 @@ struct CategoryDetailView: View {
 
             Divider()
 
-            if results.isEmpty {
-                EmptyCategoryView(isRunning: isRunning)
-            } else {
-                List {
+            List {
+                if category == .storage {
+                    CleanupReviewView(
+                        snapshot: cleanupSnapshot,
+                        selectedIDs: $selectedCleanupIDs,
+                        isScanning: isScanningCleanup,
+                        isCleaning: isCleaning,
+                        error: cleanupError,
+                        notice: cleanupNotice,
+                        scan: scanCleanup,
+                        clean: moveSelectedCleanupItemsToTrash
+                    )
+                    .listRowSeparator(.hidden)
+                }
+
+                if results.isEmpty {
+                    EmptyCategoryView(isRunning: isRunning)
+                        .listRowSeparator(.hidden)
+                        .frame(maxWidth: .infinity, minHeight: 260)
+                } else {
                     ForEach(results) { result in
                         DiagnosticRowView(result: result)
                     }
                 }
-                .listStyle(.inset)
             }
+            .listStyle(.inset)
         }
         .navigationTitle(category.title)
     }

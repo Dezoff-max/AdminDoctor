@@ -1,12 +1,13 @@
 # AdminDoc
 
-AdminDoc is a privacy-first macOS diagnostic app for system administrators, helpdesk engineers, and Mac fleet maintainers.
+AdminDoc is a privacy-first macOS diagnostic and admin utility app for system administrators, helpdesk engineers, and Mac fleet maintainers.
 
-The app runs local read-only checks, explains findings clearly, and exports a redacted support report that can be shared without exposing unnecessary personal data.
+The app runs local checks, explains findings clearly, offers carefully scoped safe utilities, and exports a redacted support report that can be shared without exposing unnecessary personal data.
 
 ## Principles
 
-- No destructive actions in the MVP.
+- Diagnostics are read-only.
+- Cleanup actions are explicit, scoped, and move items to Trash instead of permanently deleting them.
 - No sudo prompts in the MVP.
 - No telemetry or network upload.
 - All diagnostics run locally.
@@ -49,6 +50,13 @@ Implemented checks:
 - LaunchAgent and LaunchDaemon plist validation
 - explicit MVP log collection policy
 
+Safe utility actions:
+
+- scan user cache, temporary, user log, and old installer/archive locations
+- preselect only conservative cleanup candidates
+- require confirmation before cleanup
+- move selected items to Trash for review or restore
+
 ## Privacy
 
 Markdown and JSON exports are redacted by default. The redactor currently handles:
@@ -61,7 +69,7 @@ Markdown and JSON exports are redacted by default. The redactor currently handle
 - MAC addresses
 - Wi-Fi SSID when present in diagnostic results
 
-AdminDoc does not upload reports, phone home, or collect analytics.
+AdminDoc does not upload reports, phone home, or collect analytics. The cleanup tool does not scan arbitrary paths and does not request elevated privileges.
 
 ## Architecture
 
@@ -85,6 +93,7 @@ Key boundaries:
 - Diagnostic logic lives in `Sources/AdminDocCore`.
 - Command execution goes through `CommandRunning`.
 - `ProcessRunner` rejects shell and sudo executables and runs fixed executable paths with arguments.
+- Safe cleanup logic lives in `DiskCleanupService` and only operates on configured user-scoped locations.
 - Providers are small and independently testable.
 - Report export is handled by `ReportExporter`.
 

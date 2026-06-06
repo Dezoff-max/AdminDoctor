@@ -6,15 +6,23 @@ final class DiagnosticStore: ObservableObject {
     @Published private(set) var results: [DiagnosticResult] = []
     @Published private(set) var isRunning = false
     @Published private(set) var lastRunDate: Date?
+    @Published private(set) var cleanupSnapshot: CleanupSnapshot?
+    @Published private(set) var isScanningCleanup = false
+    @Published private(set) var isCleaning = false
+    @Published var selectedCleanupIDs: Set<UUID> = []
     @Published var exportError: String?
+    @Published var cleanupError: String?
+    @Published var cleanupNotice: String?
 
     private let runner: any CommandRunning
     private let suite: DiagnosticSuite
     private let exporter = ReportExporter()
+    private let cleanupService: DiskCleanupService
 
-    init(runner: any CommandRunning = ProcessRunner()) {
+    init(runner: any CommandRunning = ProcessRunner(), cleanupService: DiskCleanupService = DiskCleanupService()) {
         self.runner = runner
         self.suite = DiagnosticSuite.default(runner: runner)
+        self.cleanupService = cleanupService
     }
 
     func runDiagnostics() async {
@@ -62,6 +70,62 @@ final class DiagnosticStore: ObservableObject {
         }
     }
 
+    func scanCleanup(clearNotice: Bool = true) async {
+        guard !isScanningCleanup else {
+            return
+        }
+
+        isScanningCleanup = true
+        cleanupError = nil
+        if clearNotice {
+            cleanupNotice = nil
+        }
+
+        let service = cleanupService
+        let result = await Task.detached(priority: .userInitiated) {
+            Result { try service.scan() }
+        }.value
+
+        switch result {
+        case .success(let snapshot):
+            cleanupSnapshot = snapshot
+            selectedCleanupIDs = Set(snapshot.candidates.filter(\.defaultSelected).map(\.id))
+        case .failure(let error):
+            cleanupError = error.localizedDescription
+        }
+
+        isScanningCleanup = false
+    }
+
+    func moveSelectedCleanupItemsToTrash() async {
+        guard
+            !isCleaning,
+            let snapshot = cleanupSnapshot
+        else {
+            return
+        }
+
+        let selectedCandidates = snapshot.candidates.filter { selectedCleanupIDs.contains($0.id) }
+        guard !selectedCandidates.isEmpty else {
+            cleanupNotice = "No cleanup items selected."
+            return
+        }
+
+        isCleaning = true
+        cleanupError = nil
+        cleanupNotice = nil
+
+        let service = cleanupService
+        let summary = await Task.detached(priority: .userInitiated) {
+            service.moveToTrash(selectedCandidates)
+        }.value
+
+        selectedCleanupIDs.removeAll()
+        cleanupNotice = cleanupNotice(for: summary)
+        isCleaning = false
+        await scanCleanup(clearNotice: false)
+    }
+
     var totalSummary: (fail: Int, warning: Int, pass: Int, info: Int) {
         (
             results.filter { $0.severity == .fail }.count,
@@ -73,5 +137,17 @@ final class DiagnosticStore: ObservableObject {
 
     private func categoryOrder(_ category: DiagnosticCategory) -> Int {
         DiagnosticCategory.allCases.firstIndex(of: category) ?? Int.max
+    }
+
+    private func cleanupNotice(for summary: CleanupExecutionSummary) -> String {
+        if summary.trashed.isEmpty, !summary.failures.isEmpty {
+            return "No items moved. \(summary.failures.count) item(s) failed."
+        }
+
+        if !summary.failures.isEmpty {
+            return "\(summary.trashed.count) item(s) moved to Trash, \(summary.failures.count) failed."
+        }
+
+        return "\(summary.trashed.count) item(s) moved to Trash, \(summary.reclaimedBytesLabel) selected."
     }
 }

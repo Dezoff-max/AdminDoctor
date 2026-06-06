@@ -24,7 +24,19 @@ struct ContentView: View {
                 results: store.results(for: selectedCategory),
                 isRunning: store.isRunning,
                 lastRunDate: store.lastRunDate,
-                totalSummary: store.totalSummary
+                totalSummary: store.totalSummary,
+                cleanupSnapshot: store.cleanupSnapshot,
+                selectedCleanupIDs: $store.selectedCleanupIDs,
+                isScanningCleanup: store.isScanningCleanup,
+                isCleaning: store.isCleaning,
+                cleanupError: store.cleanupError,
+                cleanupNotice: store.cleanupNotice,
+                scanCleanup: {
+                    Task { await store.scanCleanup() }
+                },
+                moveSelectedCleanupItemsToTrash: {
+                    Task { await store.moveSelectedCleanupItemsToTrash() }
+                }
             )
         }
         .toolbar {

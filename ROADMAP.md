@@ -33,7 +33,24 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [x] Add unit tests for redaction and diagnostic parsing.
 - [x] Add GitHub Actions CI.
 
-## v0.2.0 - MDM And Profiles
+## v0.1.1 - Safe Storage Cleanup
+
+- [x] Add scan-first storage cleanup panel.
+- [x] Limit cleanup to user-scoped cache, temporary, log, and installer/archive locations.
+- [x] Preselect conservative cleanup candidates.
+- [x] Require user confirmation before cleanup.
+- [x] Move selected items to Trash instead of permanently deleting them.
+- [x] Add cleanup service tests for scope and age filtering.
+
+## v0.2.0 - Admin Toolkit Foundation
+
+- [ ] Add a tools sidebar model separate from diagnostic categories.
+- [ ] Add action audit trail for any non-read-only utility operation.
+- [ ] Add per-tool risk labels: read-only, reversible, privileged-later.
+- [ ] Add dry-run summaries for every future action.
+- [ ] Add local-only preferences for defaults and retention windows.
+
+## v0.3.0 - MDM And Profiles
 
 - [ ] Replace profile count heuristics with structured profile parsing where available.
 - [ ] Detect user vs device profiles.
@@ -41,7 +58,7 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [ ] Add profile parser fixtures from multiple macOS versions.
 - [ ] Document privacy behavior for profile payload fields.
 
-## v0.3.0 - Launchd Inspector
+## v0.4.0 - Launchd Inspector
 
 - [ ] Parse launchd labels, program paths, and disabled state.
 - [ ] Detect missing executable paths.
@@ -49,7 +66,7 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [ ] Add launchd fixtures for valid, invalid, and broken plists.
 - [ ] Add filtering by system, local admin, and current user paths.
 
-## v0.4.0 - Log Playbooks
+## v0.5.0 - Log Playbooks
 
 - [ ] Add predefined unified log query previews for common admin issues:
   - [ ] Wi-Fi
@@ -61,13 +78,24 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [ ] Limit log collection by time range.
 - [ ] Redact sensitive log output before export.
 
-## v0.5.0 - Support Bundle
+## v0.6.0 - Support Bundle
 
 - [ ] Export ZIP support bundle.
 - [ ] Include Markdown report, JSON report, selected logs, and diagnostic metadata.
 - [ ] Add export preview before writing files.
 - [ ] Add bundle size estimate.
 - [ ] Add redaction summary.
+
+## v0.7.0 - Swiss Army Admin Tools
+
+- [ ] Network quick tests: DNS lookup, ping, route, captive portal signal, proxy reachability.
+- [ ] Permissions inspector: app TCC status, Full Disk Access signal, accessibility permission signal.
+- [ ] App inventory: signed/notarized status, quarantine flag, architecture, last opened date.
+- [ ] Login items and background services inspector.
+- [ ] Software Update and Rosetta status.
+- [ ] Certificate and keychain expiration review without exporting secrets.
+- [ ] Local account posture: secure token, admin membership, password age signals where available without sudo.
+- [ ] Report comparison for before/after troubleshooting.
 
 ## v1.0.0 - Stable Release
 
