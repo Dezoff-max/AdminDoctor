@@ -14,7 +14,7 @@ public struct ProxyInfo: Equatable, Sendable {
 
 public enum NetworkParser {
     public static func parseInterfaces(_ output: String) -> [NetworkInterfaceInfo] {
-        let blocks = output.components(separatedBy: "\n\n")
+        let blocks = interfaceBlocks(output)
         return blocks.compactMap { block in
             guard let header = block.split(whereSeparator: \.isNewline).first else {
                 return nil
@@ -49,15 +49,14 @@ public enum NetworkParser {
     }
 
     public static func parseProxy(_ output: String) -> ProxyInfo {
-        let lines = Dictionary(
-            uniqueKeysWithValues: ParserHelpers.trimmedNonEmptyLines(output).compactMap { line -> (String, String)? in
-                let parts = line.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
-                guard parts.count == 2 else {
-                    return nil
-                }
-                return (parts[0], parts[1])
+        var lines: [String: String] = [:]
+        for line in ParserHelpers.trimmedNonEmptyLines(output) {
+            let parts = line.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+            guard parts.count == 2 else {
+                continue
             }
-        )
+            lines[parts[0]] = parts[1]
+        }
 
         let httpEnabled = lines["HTTPEnable"] == "1"
         let httpsEnabled = lines["HTTPSEnable"] == "1"
@@ -92,6 +91,26 @@ public enum NetworkParser {
         }
         return ParserHelpers.firstCapture(in: output, pattern: #"Current Wi-Fi Network:\s*(.+)$"#, options: [.anchorsMatchLines])?
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func interfaceBlocks(_ output: String) -> [String] {
+        var blocks: [String] = []
+        var current: [String] = []
+
+        for line in output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init) {
+            let isHeader = line.first?.isWhitespace == false && line.contains(":")
+            if isHeader, !current.isEmpty {
+                blocks.append(current.joined(separator: "\n"))
+                current = []
+            }
+            current.append(line)
+        }
+
+        if !current.isEmpty {
+            blocks.append(current.joined(separator: "\n"))
+        }
+
+        return blocks
     }
 }
 
