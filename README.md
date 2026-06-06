@@ -1,0 +1,125 @@
+# AdminDoc
+
+AdminDoc is a privacy-first macOS diagnostic app for system administrators, helpdesk engineers, and Mac fleet maintainers.
+
+The app runs local read-only checks, explains findings clearly, and exports a redacted support report that can be shared without exposing unnecessary personal data.
+
+## Principles
+
+- No destructive actions in the MVP.
+- No sudo prompts in the MVP.
+- No telemetry or network upload.
+- All diagnostics run locally.
+- Report exports redact personal data by default.
+- Findings should be useful to real Mac admins, not just dashboard decoration.
+
+## MVP Scope
+
+AdminDoc is a SwiftPM-based native macOS SwiftUI app with a reusable `AdminDocCore` library.
+
+Implemented categories:
+
+- System
+- Storage
+- Security
+- Network
+- MDM & Profiles
+- Launch Services
+- Logs
+
+Implemented checks:
+
+- macOS version and build
+- uptime
+- hardware model
+- architecture
+- system volume free space
+- APFS status from structured `diskutil` plist output
+- FileVault status
+- SIP status
+- Gatekeeper status
+- application firewall status when available
+- active network interfaces
+- DNS nameservers
+- default gateway
+- system proxy state
+- Wi-Fi SSID signal when available
+- MDM enrollment signal
+- installed configuration profile signal
+- LaunchAgent and LaunchDaemon plist validation
+- explicit MVP log collection policy
+
+## Privacy
+
+Markdown and JSON exports are redacted by default. The redactor currently handles:
+
+- username
+- hostname
+- serial number when available
+- local IPv4 addresses
+- link-local IPv6 addresses
+- MAC addresses
+- Wi-Fi SSID when present in diagnostic results
+
+AdminDoc does not upload reports, phone home, or collect analytics.
+
+## Architecture
+
+```text
+Sources/
+  AdminDoc/
+    App/
+    Views/
+  AdminDocCore/
+    Models/
+    Providers/
+    Services/
+    Support/
+Tests/
+  AdminDocCoreTests/
+```
+
+Key boundaries:
+
+- SwiftUI views live in `Sources/AdminDoc`.
+- Diagnostic logic lives in `Sources/AdminDocCore`.
+- Command execution goes through `CommandRunning`.
+- `ProcessRunner` rejects shell and sudo executables and runs fixed executable paths with arguments.
+- Providers are small and independently testable.
+- Report export is handled by `ReportExporter`.
+
+## Development
+
+Build and test:
+
+```sh
+swift build
+swift test
+```
+
+Run as a macOS app bundle:
+
+```sh
+./script/build_and_run.sh
+```
+
+The Codex app Run button is wired through `.codex/environments/environment.toml`.
+
+## Reports
+
+The app exports:
+
+- Markdown support report
+- JSON support report
+
+ZIP support bundles are intentionally left for a later milestone because they need preview, size estimates, and stricter redaction review.
+
+## Status
+
+AdminDoc is an early MVP skeleton. It is useful for local first-pass diagnostics, but not yet a replacement for a signed, notarized admin support utility.
+
+See [ROADMAP.md](./ROADMAP.md) for next milestones.
+
+## License
+
+MIT License. See [LICENSE](./LICENSE).

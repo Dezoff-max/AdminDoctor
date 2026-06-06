@@ -1,0 +1,26 @@
+name: Feature Request
+description: Suggest a read-only diagnostic or product improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Admin Problem
+      description: What real admin or helpdesk workflow would this improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the read-only behavior and expected output.
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy Considerations
+      description: What sensitive data could this collect, show, or export?
+    validations:
+      required: true
