@@ -1,6 +1,6 @@
 # Security Policy
 
-AdminDoc is designed for local read-only diagnostics plus explicitly confirmed, reversible admin utilities.
+AdminDoc is designed for local diagnostics plus explicitly confirmed, reversible admin utilities.
 
 ## Supported Versions
 
@@ -21,7 +21,7 @@ Please report vulnerabilities privately through GitHub Security Advisories when 
 
 AdminDoc must not:
 
-- request sudo in the MVP
+- execute shell `sudo`
 - run irreversible cleanup commands
 - upload reports
 - phone home
@@ -36,6 +36,12 @@ Safe cleanup utilities must:
 - require explicit user confirmation
 - move selected items to Trash instead of permanently deleting them
 - keep system paths and privileged locations out of scope
+
+## Administrator Authorization
+
+AdminDoc requests administrator authorization at launch through macOS Authorization Services. The app stores the resulting authorization reference only in memory for the current app session.
+
+This does not make the SwiftUI process run as root. Future privileged operations must use explicit, reviewed code paths and should move to a signed privileged helper before touching system-owned state.
 
 ## Sensitive Test Data
 

@@ -42,6 +42,15 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [x] Move selected items to Trash instead of permanently deleting them.
 - [x] Add cleanup service tests for scope and age filtering.
 
+## v0.1.2 - Admin Authorization And Network Cache
+
+- [x] Request administrator authorization at app launch through macOS Authorization Services.
+- [x] Keep authorization state in memory for the current app session.
+- [x] Show admin authorization status in the dashboard header.
+- [x] Add a Network button to clear the local DNS cache.
+- [x] Add reproducible app and DMG icon generation.
+- [x] Avoid shell `sudo` execution.
+
 ## v0.2.0 - Admin Toolkit Foundation
 
 - [ ] Add a tools sidebar model separate from diagnostic categories.
@@ -49,6 +58,7 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [ ] Add per-tool risk labels: read-only, reversible, privileged-later.
 - [ ] Add dry-run summaries for every future action.
 - [ ] Add local-only preferences for defaults and retention windows.
+- [ ] Add a signed privileged helper for operations that truly need root.
 
 ## v0.3.0 - MDM And Profiles
 

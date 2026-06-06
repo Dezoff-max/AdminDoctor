@@ -25,17 +25,24 @@ struct ContentView: View {
                 isRunning: store.isRunning,
                 lastRunDate: store.lastRunDate,
                 totalSummary: store.totalSummary,
+                adminPrivilegeState: store.adminPrivilegeState,
                 cleanupSnapshot: store.cleanupSnapshot,
                 selectedCleanupIDs: $store.selectedCleanupIDs,
                 isScanningCleanup: store.isScanningCleanup,
                 isCleaning: store.isCleaning,
                 cleanupError: store.cleanupError,
                 cleanupNotice: store.cleanupNotice,
+                networkCacheSummary: store.networkCacheSummary,
+                isClearingDNSCache: store.isClearingDNSCache,
+                networkCacheError: store.networkCacheError,
                 scanCleanup: {
                     Task { await store.scanCleanup() }
                 },
                 moveSelectedCleanupItemsToTrash: {
                     Task { await store.moveSelectedCleanupItemsToTrash() }
+                },
+                clearDNSCache: {
+                    Task { await store.clearDNSCache() }
                 }
             )
         }
@@ -66,6 +73,7 @@ struct ContentView: View {
             }
         }
         .task {
+            await store.requestAdminPrivilegesAtLaunch()
             if store.results.isEmpty {
                 await store.runDiagnostics()
             }

@@ -7,14 +7,19 @@ struct CategoryDetailView: View {
     let isRunning: Bool
     let lastRunDate: Date?
     let totalSummary: (fail: Int, warning: Int, pass: Int, info: Int)
+    let adminPrivilegeState: AdminPrivilegeState
     let cleanupSnapshot: CleanupSnapshot?
     @Binding var selectedCleanupIDs: Set<UUID>
     let isScanningCleanup: Bool
     let isCleaning: Bool
     let cleanupError: String?
     let cleanupNotice: String?
+    let networkCacheSummary: NetworkCacheFlushSummary?
+    let isClearingDNSCache: Bool
+    let networkCacheError: String?
     let scanCleanup: () -> Void
     let moveSelectedCleanupItemsToTrash: () -> Void
+    let clearDNSCache: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -22,7 +27,8 @@ struct CategoryDetailView: View {
                 category: category,
                 isRunning: isRunning,
                 lastRunDate: lastRunDate,
-                totalSummary: totalSummary
+                totalSummary: totalSummary,
+                adminPrivilegeState: adminPrivilegeState
             )
 
             Divider()
@@ -38,6 +44,16 @@ struct CategoryDetailView: View {
                         notice: cleanupNotice,
                         scan: scanCleanup,
                         clean: moveSelectedCleanupItemsToTrash
+                    )
+                    .listRowSeparator(.hidden)
+                }
+
+                if category == .network {
+                    NetworkCacheView(
+                        summary: networkCacheSummary,
+                        isClearing: isClearingDNSCache,
+                        error: networkCacheError,
+                        clearDNSCache: clearDNSCache
                     )
                     .listRowSeparator(.hidden)
                 }
@@ -63,6 +79,7 @@ private struct HeaderView: View {
     let isRunning: Bool
     let lastRunDate: Date?
     let totalSummary: (fail: Int, warning: Int, pass: Int, info: Int)
+    let adminPrivilegeState: AdminPrivilegeState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -70,6 +87,7 @@ private struct HeaderView: View {
                 Label(category.title, systemImage: category.symbolName)
                     .font(.title2.weight(.semibold))
                 Spacer()
+                AdminPrivilegePill(state: adminPrivilegeState)
                 Text(statusText)
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -96,6 +114,55 @@ private struct HeaderView: View {
         }
 
         return "Last run \(lastRunDate.formatted(date: .abbreviated, time: .shortened))"
+    }
+}
+
+private struct AdminPrivilegePill: View {
+    let state: AdminPrivilegeState
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(color)
+                .frame(width: 7, height: 7)
+            Text(title)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .help(state.message)
+    }
+
+    private var title: String {
+        switch state.status {
+        case .notRequested:
+            return "Admin not requested"
+        case .requesting:
+            return "Admin requested"
+        case .authorized:
+            return "Admin authorized"
+        case .denied:
+            return "Admin denied"
+        case .canceled:
+            return "Admin canceled"
+        case .unavailable:
+            return "Admin unavailable"
+        }
+    }
+
+    private var color: Color {
+        switch state.status {
+        case .authorized:
+            return .green
+        case .requesting:
+            return .blue
+        case .denied, .canceled, .unavailable:
+            return .orange
+        case .notRequested:
+            return .secondary
+        }
     }
 }
 

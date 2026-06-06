@@ -8,7 +8,8 @@ The app runs local checks, explains findings clearly, offers carefully scoped sa
 
 - Diagnostics are read-only.
 - Cleanup actions are explicit, scoped, and move items to Trash instead of permanently deleting them.
-- No sudo prompts in the MVP.
+- The app requests administrator authorization at launch for admin utility actions.
+- No shell `sudo` execution.
 - No telemetry or network upload.
 - All diagnostics run locally.
 - Report exports redact personal data by default.
@@ -56,6 +57,7 @@ Safe utility actions:
 - preselect only conservative cleanup candidates
 - require confirmation before cleanup
 - move selected items to Trash for review or restore
+- clear the local DNS cache with `dscacheutil -flushcache`
 
 ## Privacy
 
@@ -69,7 +71,7 @@ Markdown and JSON exports are redacted by default. The redactor currently handle
 - MAC addresses
 - Wi-Fi SSID when present in diagnostic results
 
-AdminDoc does not upload reports, phone home, or collect analytics. The cleanup tool does not scan arbitrary paths and does not request elevated privileges.
+AdminDoc does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services.
 
 ## Architecture
 
@@ -93,6 +95,7 @@ Key boundaries:
 - Diagnostic logic lives in `Sources/AdminDocCore`.
 - Command execution goes through `CommandRunning`.
 - `ProcessRunner` rejects shell and sudo executables and runs fixed executable paths with arguments.
+- Administrator authorization state is handled by `AdminPrivilegeManager`.
 - Safe cleanup logic lives in `DiskCleanupService` and only operates on configured user-scoped locations.
 - Providers are small and independently testable.
 - Report export is handled by `ReportExporter`.
@@ -111,6 +114,15 @@ Run as a macOS app bundle:
 ```sh
 ./script/build_and_run.sh
 ```
+
+Regenerate icons and build a local DMG:
+
+```sh
+./script/generate_icons.sh
+./script/build_dmg.sh
+```
+
+The app and DMG icons are generated locally from `script/render_icon.swift`; binary icon outputs are intentionally ignored by git.
 
 The Codex app Run button is wired through `.codex/environments/environment.toml`.
 

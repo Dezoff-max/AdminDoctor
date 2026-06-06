@@ -9,20 +9,34 @@ final class DiagnosticStore: ObservableObject {
     @Published private(set) var cleanupSnapshot: CleanupSnapshot?
     @Published private(set) var isScanningCleanup = false
     @Published private(set) var isCleaning = false
+    @Published private(set) var isClearingDNSCache = false
+    @Published private(set) var networkCacheSummary: NetworkCacheFlushSummary?
+    @Published private(set) var adminPrivilegeState: AdminPrivilegeState = .notRequested
     @Published var selectedCleanupIDs: Set<UUID> = []
     @Published var exportError: String?
     @Published var cleanupError: String?
     @Published var cleanupNotice: String?
+    @Published var networkCacheError: String?
 
     private let runner: any CommandRunning
     private let suite: DiagnosticSuite
     private let exporter = ReportExporter()
     private let cleanupService: DiskCleanupService
+    private let networkCacheService: NetworkCacheService
+    private let adminPrivilegeManager: AdminPrivilegeManager
+    private var didRequestLaunchPrivileges = false
 
-    init(runner: any CommandRunning = ProcessRunner(), cleanupService: DiskCleanupService = DiskCleanupService()) {
+    init(
+        runner: any CommandRunning = ProcessRunner(),
+        cleanupService: DiskCleanupService = DiskCleanupService(),
+        networkCacheService: NetworkCacheService? = nil,
+        adminPrivilegeManager: AdminPrivilegeManager = AdminPrivilegeManager()
+    ) {
         self.runner = runner
         self.suite = DiagnosticSuite.default(runner: runner)
         self.cleanupService = cleanupService
+        self.networkCacheService = networkCacheService ?? NetworkCacheService(runner: runner)
+        self.adminPrivilegeManager = adminPrivilegeManager
     }
 
     func runDiagnostics() async {
@@ -48,6 +62,26 @@ final class DiagnosticStore: ObservableObject {
         }
         lastRunDate = Date()
         isRunning = false
+    }
+
+    func requestAdminPrivilegesAtLaunch() async {
+        guard !didRequestLaunchPrivileges else {
+            return
+        }
+
+        didRequestLaunchPrivileges = true
+        adminPrivilegeState = AdminPrivilegeState(
+            status: .requesting,
+            requestedAt: Date(),
+            message: "Requesting administrator privileges..."
+        )
+
+        let manager = adminPrivilegeManager
+        let state = await Task.detached(priority: .userInitiated) {
+            manager.requestAdminRights()
+        }.value
+
+        adminPrivilegeState = state
     }
 
     func results(for category: DiagnosticCategory) -> [DiagnosticResult] {
@@ -124,6 +158,26 @@ final class DiagnosticStore: ObservableObject {
         cleanupNotice = cleanupNotice(for: summary)
         isCleaning = false
         await scanCleanup(clearNotice: false)
+    }
+
+    func clearDNSCache() async {
+        guard !isClearingDNSCache else {
+            return
+        }
+
+        isClearingDNSCache = true
+        networkCacheError = nil
+
+        let service = networkCacheService
+        let summary = await Task.detached(priority: .userInitiated) {
+            service.flushDNSCache()
+        }.value
+
+        networkCacheSummary = summary
+        if !summary.succeeded {
+            networkCacheError = summary.message
+        }
+        isClearingDNSCache = false
     }
 
     var totalSummary: (fail: Int, warning: Int, pass: Int, info: Int) {
