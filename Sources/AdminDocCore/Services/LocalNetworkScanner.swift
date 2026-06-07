@@ -196,7 +196,7 @@ enum LocalNetworkParser {
                 ipAddress: String(output[ipRange]),
                 macAddress: macAddress,
                 hostname: hostname == "?" ? nil : hostname,
-                vendorName: vendorName(for: macAddress),
+                vendorName: OUIVendorDatabase.shared.vendorName(for: macAddress),
                 interfaceName: String(output[interfaceRange]),
                 source: "arp -an"
             )
@@ -348,58 +348,6 @@ enum LocalNetworkParser {
         ignoredInterfaceNames.contains(name)
             || ignoredInterfacePrefixes.contains { name.hasPrefix($0) }
     }
-
-    private static func vendorName(for macAddress: String) -> String? {
-        let octets = macAddress
-            .lowercased()
-            .split(separator: ":")
-            .prefix(3)
-            .map { octet in
-                octet.count == 1 ? "0\(octet)" : String(octet)
-            }
-
-        guard octets.count == 3 else {
-            return nil
-        }
-
-        return knownVendors[octets.joined(separator: ":")]
-    }
-
-    private static let knownVendors: [String: String] = [
-        "00:1a:11": "Google",
-        "00:1b:63": "Apple",
-        "00:1f:f3": "Apple",
-        "00:23:12": "Apple",
-        "00:25:00": "Apple",
-        "00:26:bb": "Apple",
-        "00:50:56": "VMware",
-        "00:0c:29": "VMware",
-        "3c:22:fb": "Apple",
-        "40:cb:c0": "Apple",
-        "44:65:0d": "Amazon",
-        "5c:e9:1e": "Apple",
-        "60:f8:1d": "Apple",
-        "70:cd:60": "Apple",
-        "74:e2:f5": "Apple",
-        "78:4f:43": "Apple",
-        "84:38:35": "Apple",
-        "88:66:5a": "Apple",
-        "8c:85:90": "Apple",
-        "90:72:40": "Apple",
-        "94:e9:79": "Apple",
-        "98:01:a7": "Apple",
-        "a4:83:e7": "Apple",
-        "ac:bc:32": "Apple",
-        "b8:27:eb": "Raspberry Pi",
-        "bc:54:2f": "Apple",
-        "c8:69:cd": "Apple",
-        "d0:03:4b": "Apple",
-        "d8:30:62": "Apple",
-        "dc:a6:32": "Raspberry Pi",
-        "f0:18:98": "Apple",
-        "f4:f5:d8": "Google",
-        "fc:fc:48": "Apple"
-    ]
 
     private static func parseInterfaceAddress(in block: String) -> (address: String?, netmask: String?)? {
         for rawLine in block.split(whereSeparator: \.isNewline) {

@@ -41,6 +41,38 @@ final class LocalNetworkScannerTests: XCTestCase {
         XCTAssertEqual(devices[1].macAddress, "11:22:33:44:55:66")
     }
 
+    func testParsesVendorNamesFromBundledOUIDatabase() {
+        let arp = """
+        ? (192.168.1.1) at a8:42:a1:33:a6:fe on en0 ifscope [ethernet]
+        ? (192.168.1.101) at 54:ef:44:23:4b:eb on en0 ifscope [ethernet]
+        ? (192.168.1.107) at 1c:d:7d:7d:31:44 on en0 ifscope [ethernet]
+        ? (192.168.1.109) at 02:1f:94:3e:dd:6c on en0 ifscope [ethernet]
+        """
+
+        let devices = LocalNetworkParser.parseARPDevices(arp)
+
+        XCTAssertEqual(devices.map(\.vendorName), [
+            "TP-Link Systems Inc",
+            "Lumi United Technology Co., Ltd",
+            "Apple, Inc.",
+            nil
+        ])
+        XCTAssertTrue(MACAddressClassifier.isLocallyAdministered("02:1f:94:3e:dd:6c"))
+    }
+
+    func testParsesQuotedOUIAssignmentRows() {
+        let text = """
+        Registry,Assignment,Organization Name,Organization Address
+        MA-L,54EF44,"Lumi United Technology Co., Ltd","Shenzhen, CN"
+        MA-L,A842A1,TP-Link Systems Inc,5 Peters Canyon Rd
+        """
+
+        let rows = OUIVendorDatabase.parseAssignmentRows(text)
+
+        XCTAssertEqual(rows.map(\.prefix), ["54EF44", "A842A1"])
+        XCTAssertEqual(rows.map(\.vendor), ["Lumi United Technology Co., Ltd", "TP-Link Systems Inc"])
+    }
+
     func testParsesResolvedHostName() {
         let output = """
         name: printer.local.

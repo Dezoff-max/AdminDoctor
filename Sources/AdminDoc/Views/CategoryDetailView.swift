@@ -25,6 +25,7 @@ struct CategoryDetailView: View {
     let moveSelectedCleanupItemsToTrash: () -> Void
     let clearDNSCache: () -> Void
     let scanLocalNetwork: () -> Void
+    let clearLocalNetworkScan: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -67,7 +68,8 @@ struct CategoryDetailView: View {
                         snapshot: localNetworkScanSnapshot,
                         isScanning: isScanningLocalNetwork,
                         error: localNetworkScanError,
-                        scan: scanLocalNetwork
+                        scan: scanLocalNetwork,
+                        clear: clearLocalNetworkScan
                     )
                     .listRowSeparator(.hidden)
                 }

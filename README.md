@@ -84,6 +84,7 @@ Implemented checks:
 - default gateway
 - system proxy state
 - Wi-Fi SSID signal when available
+- local LAN scan with ARP discovery, hostname hints, and offline IEEE OUI manufacturer lookup
 - MDM enrollment signal
 - installed configuration profile signal
 - LaunchAgent and LaunchDaemon plist validation and startup item listing
@@ -100,6 +101,7 @@ Safe utility actions:
 - require confirmation before cleanup
 - move selected items to Trash for review or restore
 - clear the local DNS cache with `dscacheutil -flushcache`
+- scan the local /24 LAN view and clear displayed LAN scan results
 
 ## Privacy
 
@@ -113,7 +115,7 @@ Markdown and JSON exports are redacted by default. The redactor currently handle
 - MAC addresses
 - Wi-Fi SSID when present in diagnostic results
 
-AdminDoc does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services.
+AdminDoc does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services. LAN manufacturer lookup uses bundled IEEE Registration Authority CSV data and does not make runtime vendor lookup requests.
 
 ## Architecture
 

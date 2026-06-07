@@ -98,6 +98,7 @@
 "network.cache.success" = "Запрошена очистка DNS-кэша.";
 "network.cache.title" = "DNS-кэш";
 "network.local.capped" = "Обнаружена большая подсеть; скан ограничен локальным /24 вокруг этого Mac.";
+"network.local.clear" = "Очистить";
 "network.local.columnMac" = "MAC адрес";
 "network.local.columnName" = "Имя";
 "network.local.columnStatus" = "Статус";
@@ -116,6 +117,7 @@
 "network.local.localAddress" = "Этот Mac";
 "network.local.noMac" = "Нет MAC";
 "network.local.online" = "В сети";
+"network.local.privateVendor" = "Частный MAC";
 "network.local.range" = "Диапазон";
 "network.local.rangePlaceholder" = "Авто диапазон";
 "network.local.scan" = "Скан LAN";

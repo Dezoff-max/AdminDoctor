@@ -224,6 +224,15 @@ final class DiagnosticStore: ObservableObject {
         isScanningLocalNetwork = false
     }
 
+    func clearLocalNetworkScan() {
+        guard !isScanningLocalNetwork else {
+            return
+        }
+
+        localNetworkScanSnapshot = nil
+        localNetworkScanError = nil
+    }
+
     var totalSummary: (fail: Int, warning: Int, pass: Int, info: Int) {
         (
             results.filter { $0.severity == .fail }.count,

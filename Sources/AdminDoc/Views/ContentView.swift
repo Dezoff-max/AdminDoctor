@@ -50,6 +50,9 @@ struct ContentView: View {
                 },
                 scanLocalNetwork: {
                     Task { await store.scanLocalNetwork() }
+                },
+                clearLocalNetworkScan: {
+                    store.clearLocalNetworkScan()
                 }
             )
         }

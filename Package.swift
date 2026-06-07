@@ -16,7 +16,10 @@ let package = Package(
     targets: [
         .target(
             name: "AdminDocCore",
-            path: "Sources/AdminDocCore"
+            path: "Sources/AdminDocCore",
+            resources: [
+                .process("Resources")
+            ]
         ),
         .executableTarget(
             name: "AdminDoc",

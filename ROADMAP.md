@@ -56,6 +56,15 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [x] Add reproducible app and DMG icon generation.
 - [x] Avoid shell `sudo` execution.
 
+## v0.1.5 - LAN Scanner Vendor Lookup
+
+- [x] Add Advanced IP Scanner-style local LAN table.
+- [x] Auto-detect the active LAN interface instead of selecting VPN/tunnel interfaces.
+- [x] Scan the local /24 around this Mac and read `arp -an`.
+- [x] Bundle IEEE MA-L, MA-M, and MA-S CSV data for offline manufacturer lookup.
+- [x] Mark locally administered/randomized MAC addresses as private instead of guessing a manufacturer.
+- [x] Add a clear button for LAN scan results and filters.
+
 ## v0.2.0 - Admin Toolkit Foundation
 
 - [ ] Add a tools sidebar model separate from diagnostic categories.

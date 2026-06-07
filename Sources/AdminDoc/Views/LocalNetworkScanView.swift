@@ -6,6 +6,7 @@ struct LocalNetworkScanView: View {
     let isScanning: Bool
     let error: String?
     let scan: () -> Void
+    let clear: () -> Void
 
     @State private var rangeText = ""
     @State private var filterText = ""
@@ -15,6 +16,10 @@ struct LocalNetworkScanView: View {
             return rangeText
         }
         return snapshot?.scanRangeDescription ?? L10n.string("network.local.rangePlaceholder")
+    }
+
+    private var canClear: Bool {
+        snapshot != nil || error != nil || !rangeText.isEmpty || !filterText.isEmpty
     }
 
     private var filteredDevices: [LocalNetworkDevice] {
@@ -32,6 +37,7 @@ struct LocalNetworkScanView: View {
                 title(for: device, gateway: snapshot.gateway),
                 device.ipAddress,
                 device.macAddress,
+                vendorText(for: device),
                 device.vendorName,
                 device.hostname,
                 device.interfaceName
@@ -59,6 +65,18 @@ struct LocalNetworkScanView: View {
                 .controlSize(.large)
                 .tint(.green)
                 .disabled(isScanning)
+
+                Button {
+                    rangeText = ""
+                    filterText = ""
+                    clear()
+                } label: {
+                    Label(L10n.string("network.local.clear"), systemImage: "xmark.circle")
+                        .labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .disabled(isScanning || !canClear)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.string("network.local.range"))
@@ -403,7 +421,11 @@ private func title(for device: LocalNetworkDevice, gateway: String?) -> String {
 }
 
 private func vendorText(for device: LocalNetworkDevice) -> String {
-    device.vendorName ?? L10n.string("network.local.unknownVendor")
+    if let macAddress = device.macAddress, MACAddressClassifier.isLocallyAdministered(macAddress) {
+        return L10n.string("network.local.privateVendor")
+    }
+
+    return device.vendorName ?? L10n.string("network.local.unknownVendor")
 }
 
 private func lastAddressSegment(_ ipAddress: String) -> String {

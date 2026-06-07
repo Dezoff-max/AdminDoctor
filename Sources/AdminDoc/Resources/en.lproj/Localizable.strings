@@ -98,6 +98,7 @@
 "network.cache.success" = "DNS cache flush requested.";
 "network.cache.title" = "DNS cache";
 "network.local.capped" = "Large subnet detected; scan is capped to the local /24 around this Mac.";
+"network.local.clear" = "Clear";
 "network.local.columnMac" = "MAC address";
 "network.local.columnName" = "Name";
 "network.local.columnStatus" = "Status";
@@ -116,6 +117,7 @@
 "network.local.localAddress" = "This Mac";
 "network.local.noMac" = "No MAC";
 "network.local.online" = "Online";
+"network.local.privateVendor" = "Private MAC";
 "network.local.range" = "Range";
 "network.local.rangePlaceholder" = "Auto range";
 "network.local.scan" = "Scan LAN";
