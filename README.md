@@ -71,14 +71,22 @@ Implemented checks:
 
 - macOS version and build
 - uptime
+- Darwin kernel version
 - hardware model
 - architecture
+- CPU load average
+- memory pressure snapshot
+- top CPU process snapshot
 - system volume free space
 - APFS status from structured `diskutil` plist output
+- SSD/NVMe SMART health when reported by `diskutil`
 - FileVault status
 - SIP status
 - Gatekeeper status
 - application firewall status when available
+- XProtect and MRT version metadata
+- Software Update security setting signals
+- recent Apple security-related install history
 - active network interfaces
 - DNS nameservers
 - default gateway

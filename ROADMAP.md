@@ -65,6 +65,18 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [x] Mark locally administered/randomized MAC addresses as private instead of guessing a manufacturer.
 - [x] Add a clear button for LAN scan results and filters.
 
+## v0.1.6 - Read-only Resource And Security Signals
+
+- [x] Add Darwin kernel version to System diagnostics.
+- [x] Add CPU load average and logical CPU context.
+- [x] Add memory pressure snapshot from `vm_stat`.
+- [x] Add top CPU process snapshot.
+- [x] Warn when system volume usage exceeds 80%.
+- [x] Add SSD/NVMe SMART health from structured `diskutil` data when available.
+- [x] Add XProtect and MRT version signals.
+- [x] Add Software Update security setting signals.
+- [x] Add recent Apple security-related install history.
+
 ## v0.2.0 - Admin Toolkit Foundation
 
 - [ ] Add a tools sidebar model separate from diagnostic categories.

@@ -80,23 +80,41 @@ public final class ProcessRunner: CommandRunning, @unchecked Sendable {
             throw CommandRunnerError.launchFailed(error.localizedDescription)
         }
 
-        let group = DispatchGroup()
-        group.enter()
-        DispatchQueue.global(qos: .userInitiated).async {
-            process.waitUntilExit()
-            group.leave()
+        let stdoutBuffer = ProcessOutputBuffer()
+        let stderrBuffer = ProcessOutputBuffer()
+        let readGroup = DispatchGroup()
+
+        readGroup.enter()
+        DispatchQueue.global(qos: .utility).async {
+            stdoutBuffer.store(stdoutPipe.fileHandleForReading.readDataToEndOfFile())
+            readGroup.leave()
         }
 
-        if group.wait(timeout: .now() + command.timeout) == .timedOut {
+        readGroup.enter()
+        DispatchQueue.global(qos: .utility).async {
+            stderrBuffer.store(stderrPipe.fileHandleForReading.readDataToEndOfFile())
+            readGroup.leave()
+        }
+
+        let waitGroup = DispatchGroup()
+        waitGroup.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            process.waitUntilExit()
+            waitGroup.leave()
+        }
+
+        if waitGroup.wait(timeout: .now() + command.timeout) == .timedOut {
             process.terminate()
+            _ = waitGroup.wait(timeout: .now() + 1)
+            _ = readGroup.wait(timeout: .now() + 1)
             throw CommandRunnerError.timedOut(command.displayName)
         }
 
-        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        readGroup.wait()
+
         return CommandResult(
-            stdout: String(data: stdoutData, encoding: .utf8) ?? "",
-            stderr: String(data: stderrData, encoding: .utf8) ?? "",
+            stdout: stdoutBuffer.stringValue(),
+            stderr: stderrBuffer.stringValue(),
             exitCode: process.terminationStatus
         )
     }
@@ -109,5 +127,23 @@ public final class ProcessRunner: CommandRunning, @unchecked Sendable {
         guard !deniedExecutables.contains(command.executable) else {
             throw CommandRunnerError.unsafeExecutable(command.executable)
         }
+    }
+}
+
+private final class ProcessOutputBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var data = Data()
+
+    func store(_ newData: Data) {
+        lock.lock()
+        data = newData
+        lock.unlock()
+    }
+
+    func stringValue() -> String {
+        lock.lock()
+        let currentData = data
+        lock.unlock()
+        return String(data: currentData, encoding: .utf8) ?? ""
     }
 }

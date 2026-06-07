@@ -20,6 +20,27 @@ final class StorageParserTests: XCTestCase {
             <integer>250</integer>
             <key>APFSContainerReference</key>
             <string>disk3</string>
+            <key>BusProtocol</key>
+            <string>Apple Fabric</string>
+            <key>SolidState</key>
+            <true/>
+            <key>SMARTStatus</key>
+            <string>Verified</string>
+            <key>SMARTDeviceSpecificKeysMayVaryNotGuaranteed</key>
+            <dict>
+                <key>AVAILABLE_SPARE</key>
+                <integer>100</integer>
+                <key>AVAILABLE_SPARE_THRESHOLD</key>
+                <integer>99</integer>
+                <key>PERCENTAGE_USED</key>
+                <integer>3</integer>
+                <key>MEDIA_ERRORS_0</key>
+                <integer>0</integer>
+                <key>MEDIA_ERRORS_1</key>
+                <integer>0</integer>
+                <key>TEMPERATURE</key>
+                <integer>309</integer>
+            </dict>
         </dict>
         </plist>
         """
@@ -32,5 +53,12 @@ final class StorageParserTests: XCTestCase {
         XCTAssertEqual(info?.totalSize, 1000)
         XCTAssertEqual(info?.freeSpace, 250)
         XCTAssertEqual(info?.apfsContainerReference, "disk3")
+        XCTAssertEqual(info?.busProtocol, "Apple Fabric")
+        XCTAssertEqual(info?.solidState, true)
+        XCTAssertEqual(info?.smartStatus, "Verified")
+        XCTAssertEqual(info?.smartDetails?.availableSparePercent, 100)
+        XCTAssertEqual(info?.smartDetails?.percentageUsed, 3)
+        XCTAssertEqual(info?.smartDetails?.mediaErrors, 0)
+        XCTAssertEqual(info?.smartDetails?.temperatureCelsius, 36)
     }
 }
