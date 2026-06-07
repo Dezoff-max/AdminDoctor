@@ -18,7 +18,31 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6.0.3
 
+      - name: Check signing secrets
+        id: signing
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${MACOS_CERTIFICATE_P12_BASE64:-}" &&
+                -n "${MACOS_CERTIFICATE_PASSWORD:-}" &&
+                -n "${DEVELOPER_ID_APPLICATION:-}" &&
+                -n "${APPLE_ID:-}" &&
+                -n "${APPLE_TEAM_ID:-}" &&
+                -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Signing or notarization secrets are not configured; skipping signed release artifact."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Import Developer ID certificate
+        if: steps.signing.outputs.available == 'true'
         env:
           MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -41,6 +65,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CERTIFICATE_PASSWORD" "$KEYCHAIN_PATH"
 
       - name: Build signed DMG
+        if: steps.signing.outputs.available == 'true'
         env:
           CODE_SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_APPLICATION }}
           CODE_SIGN_TIMESTAMP_ARG: "--timestamp"
@@ -55,6 +80,7 @@ jobs:
           codesign -dv --verbose=4 dist/AdminDoctor.app
 
       - name: Notarize and staple
+        if: steps.signing.outputs.available == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -62,13 +88,14 @@ jobs:
         run: ./script/notarize_dmg.sh dist/AdminDoctor.dmg
 
       - name: Upload workflow artifact
+        if: steps.signing.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: AdminDoctor-signed-dmg
           path: dist/AdminDoctor.dmg
 
       - name: Publish GitHub release asset
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' && steps.signing.outputs.available == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
