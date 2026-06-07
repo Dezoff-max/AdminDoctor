@@ -70,7 +70,7 @@ struct CategoryDetailView: View {
             }
             .listStyle(.inset)
         }
-        .navigationTitle(category.title)
+        .navigationTitle(category.localizedTitle)
     }
 }
 
@@ -84,7 +84,7 @@ private struct HeaderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center) {
-                Label(category.title, systemImage: category.symbolName)
+                Label(category.localizedTitle, systemImage: category.symbolName)
                     .font(.title2.weight(.semibold))
                 Spacer()
                 AdminPrivilegePill(state: adminPrivilegeState)
@@ -94,10 +94,10 @@ private struct HeaderView: View {
             }
 
             HStack(spacing: 8) {
-                SeverityCountPill(title: "Fail", count: totalSummary.fail, severity: .fail)
-                SeverityCountPill(title: "Warning", count: totalSummary.warning, severity: .warning)
-                SeverityCountPill(title: "Pass", count: totalSummary.pass, severity: .pass)
-                SeverityCountPill(title: "Info", count: totalSummary.info, severity: .info)
+                SeverityCountPill(title: L10n.string("severity.fail"), count: totalSummary.fail, severity: .fail)
+                SeverityCountPill(title: L10n.string("severity.warning"), count: totalSummary.warning, severity: .warning)
+                SeverityCountPill(title: L10n.string("severity.pass"), count: totalSummary.pass, severity: .pass)
+                SeverityCountPill(title: L10n.string("severity.info"), count: totalSummary.info, severity: .info)
                 Spacer()
             }
         }
@@ -106,14 +106,14 @@ private struct HeaderView: View {
 
     private var statusText: String {
         if isRunning {
-            return "Running local checks..."
+            return L10n.string("diagnostics.runningChecks")
         }
 
         guard let lastRunDate else {
-            return "Not run"
+            return L10n.string("diagnostics.notRun")
         }
 
-        return "Last run \(lastRunDate.formatted(date: .abbreviated, time: .shortened))"
+        return L10n.format("diagnostics.status.lastRun", lastRunDate.formatted(date: .abbreviated, time: .shortened))
     }
 }
 
@@ -125,31 +125,14 @@ private struct AdminPrivilegePill: View {
             Circle()
                 .fill(color)
                 .frame(width: 7, height: 7)
-            Text(title)
+            Text(state.status.localizedTitle)
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .help(state.message)
-    }
-
-    private var title: String {
-        switch state.status {
-        case .notRequested:
-            return "Admin not requested"
-        case .requesting:
-            return "Admin requested"
-        case .authorized:
-            return "Admin authorized"
-        case .denied:
-            return "Admin denied"
-        case .canceled:
-            return "Admin canceled"
-        case .unavailable:
-            return "Admin unavailable"
-        }
+        .help(state.status.localizedMessage)
     }
 
     private var color: Color {
@@ -174,15 +157,15 @@ private struct EmptyCategoryView: View {
             if isRunning {
                 ProgressView()
                     .controlSize(.small)
-                Text("Collecting diagnostics")
+                Text(L10n.string("diagnostics.collecting"))
                     .foregroundStyle(.secondary)
             } else {
                 Image(systemName: "checklist")
                     .font(.system(size: 30))
                     .foregroundStyle(.secondary)
-                Text("No findings yet")
+                Text(L10n.string("diagnostics.noFindings"))
                     .font(.headline)
-                Text("Run diagnostics to populate this category.")
+                Text(L10n.string("diagnostics.runToPopulate"))
                     .foregroundStyle(.secondary)
             }
         }

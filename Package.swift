@@ -4,6 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "AdminDoc",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v13)
     ],

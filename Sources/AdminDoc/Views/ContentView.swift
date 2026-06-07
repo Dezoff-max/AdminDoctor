@@ -51,25 +51,25 @@ struct ContentView: View {
                 Button {
                     Task { await store.runDiagnostics() }
                 } label: {
-                    Label(store.isRunning ? "Running" : "Run", systemImage: store.isRunning ? "progress.indicator" : "play.fill")
+                    Label(store.isRunning ? L10n.string("common.running") : L10n.string("common.run"), systemImage: store.isRunning ? "progress.indicator" : "play.fill")
                 }
                 .disabled(store.isRunning)
-                .help("Run diagnostics")
+                .help(L10n.string("diagnostics.run"))
 
                 Menu {
-                    Button("Markdown") {
+                    Button(L10n.string("common.markdown")) {
                         export(.markdown)
                     }
                     .disabled(store.results.isEmpty)
 
-                    Button("JSON") {
+                    Button(L10n.string("common.json")) {
                         export(.json)
                     }
                     .disabled(store.results.isEmpty)
                 } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
+                    Label(L10n.string("diagnostics.export"), systemImage: "square.and.arrow.up")
                 }
-                .help("Export redacted report")
+                .help(L10n.string("diagnostics.export.help"))
             }
         }
         .task {
@@ -82,13 +82,13 @@ struct ContentView: View {
             }
             bringWindowForward()
         }
-        .alert("Export failed", isPresented: Binding(
+        .alert(L10n.string("diagnostics.export.failed"), isPresented: Binding(
             get: { store.exportError != nil },
             set: { if !$0 { store.exportError = nil } }
         )) {
-            Button("OK", role: .cancel) {}
+            Button(L10n.string("common.ok"), role: .cancel) {}
         } message: {
-            Text(store.exportError ?? "Unknown error")
+            Text(store.exportError ?? L10n.string("diagnostics.unknownError"))
         }
     }
 

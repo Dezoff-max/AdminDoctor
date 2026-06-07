@@ -14,7 +14,7 @@ struct AdminDocApp: App {
         }
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Run Diagnostics") {
+                Button(L10n.string("diagnostics.run.command")) {
                     Task { await store.runDiagnostics() }
                 }
                 .keyboardShortcut("r", modifiers: [.command])

@@ -73,7 +73,7 @@ final class DiagnosticStore: ObservableObject {
         adminPrivilegeState = AdminPrivilegeState(
             status: .requesting,
             requestedAt: Date(),
-            message: "Requesting administrator privileges..."
+            message: L10n.string("admin.message.requesting")
         )
 
         let manager = adminPrivilegeManager
@@ -141,7 +141,7 @@ final class DiagnosticStore: ObservableObject {
 
         let selectedCandidates = snapshot.candidates.filter { selectedCleanupIDs.contains($0.id) }
         guard !selectedCandidates.isEmpty else {
-            cleanupNotice = "No cleanup items selected."
+            cleanupNotice = L10n.string("cleanup.noSelection")
             return
         }
 
@@ -195,13 +195,13 @@ final class DiagnosticStore: ObservableObject {
 
     private func cleanupNotice(for summary: CleanupExecutionSummary) -> String {
         if summary.trashed.isEmpty, !summary.failures.isEmpty {
-            return "No items moved. \(summary.failures.count) item(s) failed."
+            return L10n.format("cleanup.notice.failedOnly", summary.failures.count)
         }
 
         if !summary.failures.isEmpty {
-            return "\(summary.trashed.count) item(s) moved to Trash, \(summary.failures.count) failed."
+            return L10n.format("cleanup.notice.mixed", summary.trashed.count, summary.failures.count)
         }
 
-        return "\(summary.trashed.count) item(s) moved to Trash, \(summary.reclaimedBytesLabel) selected."
+        return L10n.format("cleanup.notice.trashed", summary.trashed.count, summary.reclaimedBytesLabel)
     }
 }

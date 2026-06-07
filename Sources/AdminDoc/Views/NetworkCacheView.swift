@@ -10,7 +10,7 @@ struct NetworkCacheView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
-                Label("DNS cache", systemImage: "network")
+                Label(L10n.string("network.cache.title"), systemImage: "network")
                     .font(.headline)
 
                 Spacer()
@@ -18,7 +18,7 @@ struct NetworkCacheView: View {
                 Button {
                     clearDNSCache()
                 } label: {
-                    Label("Clear DNS Cache", systemImage: "arrow.clockwise")
+                    Label(L10n.string("network.cache.clear"), systemImage: "arrow.clockwise")
                 }
                 .disabled(isClearing)
             }
@@ -34,12 +34,12 @@ struct NetworkCacheView: View {
                     .foregroundStyle(.red)
                     .textSelection(.enabled)
             } else if let summary {
-                Text("\(summary.message) \(summary.flushedAt.formatted(date: .omitted, time: .shortened))")
+                Text("\(message(for: summary)) \(summary.flushedAt.formatted(date: .omitted, time: .shortened))")
                     .font(.callout)
                     .foregroundStyle(statusColor(for: summary))
                     .textSelection(.enabled)
             } else {
-                Text("Flushes the local DNS resolver cache with dscacheutil. Network services and routes are not changed.")
+                Text(L10n.string("network.cache.description"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -50,5 +50,9 @@ struct NetworkCacheView: View {
 
     private func statusColor(for summary: NetworkCacheFlushSummary) -> Color {
         summary.succeeded ? .secondary : .red
+    }
+
+    private func message(for summary: NetworkCacheFlushSummary) -> String {
+        summary.succeeded ? L10n.string("network.cache.success") : summary.message
     }
 }

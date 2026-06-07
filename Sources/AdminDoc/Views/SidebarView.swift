@@ -7,7 +7,7 @@ struct SidebarView: View {
 
     var body: some View {
         List(selection: $selectedCategoryRaw) {
-            Section("Diagnostics") {
+            Section(L10n.string("diagnostics.section")) {
                 ForEach(DiagnosticCategory.allCases) { category in
                     SidebarCategoryRow(
                         category: category,
@@ -33,7 +33,7 @@ private struct SidebarCategoryRow: View {
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(category.title)
+                Text(category.localizedTitle)
                     .lineLimit(1)
                 Text(subtitle)
                     .font(.caption)
@@ -47,8 +47,8 @@ private struct SidebarCategoryRow: View {
     private var subtitle: String {
         let total = summary.passCount + summary.warningCount + summary.failCount + summary.infoCount
         guard total > 0 else {
-            return "Not run"
+            return L10n.string("diagnostics.notRun")
         }
-        return "\(summary.failCount) fail, \(summary.warningCount) warn, \(summary.passCount) pass"
+        return L10n.format("diagnostics.sidebarSummary", summary.failCount, summary.warningCount, summary.passCount)
     }
 }

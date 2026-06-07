@@ -57,7 +57,7 @@ private struct SeverityBadge: View {
     let severity: DiagnosticSeverity
 
     var body: some View {
-        Text(severity.title)
+        Text(severity.localizedTitle)
             .font(.caption.weight(.semibold))
             .foregroundStyle(foreground)
             .padding(.horizontal, 7)

@@ -4,6 +4,42 @@ AdminDoc is a privacy-first macOS diagnostic and admin utility app for system ad
 
 The app runs local checks, explains findings clearly, offers carefully scoped safe utilities, and exports a redacted support report that can be shared without exposing unnecessary personal data.
 
+## Installation
+
+English:
+
+1. Download `AdminDoc.dmg` from the latest GitHub Release.
+2. Open the DMG and drag `AdminDoc.app` to Applications.
+3. If macOS blocks this unsigned build, prefer Control-clicking `AdminDoc.app`, choosing **Open**, then confirming **Open**.
+4. Internal/testing workaround only: if your organization allows temporarily disabling Gatekeeper, run:
+
+```sh
+sudo spctl --master-disable
+```
+
+Open AdminDoc, then re-enable Gatekeeper immediately:
+
+```sh
+sudo spctl --master-enable
+```
+
+Русский:
+
+1. Скачайте `AdminDoc.dmg` из последнего GitHub Release.
+2. Откройте DMG и перетащите `AdminDoc.app` в папку «Программы».
+3. Если macOS блокирует неподписанную сборку, сначала используйте более безопасный вариант: Control-click / правый клик по `AdminDoc.app`, выберите **Открыть**, затем подтвердите **Открыть**.
+4. Только для внутреннего тестирования: если политика вашей организации разрешает временно отключить Gatekeeper, выполните:
+
+```sh
+sudo spctl --master-disable
+```
+
+Откройте AdminDoc, затем сразу включите Gatekeeper обратно:
+
+```sh
+sudo spctl --master-enable
+```
+
 ## Principles
 
 - Diagnostics are read-only.

@@ -1,0 +1,37 @@
+AdminDoc Installation / Установка AdminDoc
+==========================================
+
+English
+-------
+1. Drag AdminDoc.app to Applications.
+2. Open AdminDoc from Applications.
+3. If macOS blocks this unsigned build, prefer the safer option:
+   Control-click AdminDoc.app, choose Open, then confirm Open.
+4. Internal/testing workaround only: if your organization allows temporarily
+   disabling Gatekeeper, run:
+
+   sudo spctl --master-disable
+
+   Open AdminDoc, then re-enable Gatekeeper immediately:
+
+   sudo spctl --master-enable
+
+AdminDoc does not upload telemetry and does not run sudo commands itself.
+
+Русский
+-------
+1. Перетащите AdminDoc.app в папку «Программы».
+2. Запустите AdminDoc из папки «Программы».
+3. Если macOS блокирует неподписанную сборку, сначала используйте более
+   безопасный вариант: Control-click / правый клик по AdminDoc.app,
+   выберите «Открыть», затем подтвердите «Открыть».
+4. Только для внутреннего тестирования: если политика вашей организации
+   разрешает временно отключить Gatekeeper, выполните:
+
+   sudo spctl --master-disable
+
+   Откройте AdminDoc, затем сразу включите Gatekeeper обратно:
+
+   sudo spctl --master-enable
+
+AdminDoc не отправляет телеметрию и сам не запускает sudo-команды.

@@ -28,13 +28,13 @@ struct CleanupReviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
-                Label("Storage cleanup", systemImage: "trash")
+                Label(L10n.string("cleanup.storageCleanup"), systemImage: "trash")
                     .font(.headline)
 
                 Spacer()
 
                 if let snapshot {
-                    Text("\(candidates.count) items, \(snapshot.totalBytesLabel)")
+                    Text(L10n.format("cleanup.candidateCount", candidates.count, snapshot.totalBytesLabel))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -42,14 +42,14 @@ struct CleanupReviewView: View {
                 Button {
                     scan()
                 } label: {
-                    Label("Scan", systemImage: "magnifyingglass")
+                    Label(L10n.string("cleanup.scan"), systemImage: "magnifyingglass")
                 }
                 .disabled(isScanning || isCleaning)
 
                 Button(role: .destructive) {
                     confirmingCleanup = true
                 } label: {
-                    Label("Move to Trash", systemImage: "trash")
+                    Label(L10n.string("common.moveToTrash"), systemImage: "trash")
                 }
                 .disabled(selectedIDs.isEmpty || isScanning || isCleaning)
             }
@@ -72,24 +72,24 @@ struct CleanupReviewView: View {
             }
 
             if candidates.isEmpty {
-                Text(snapshot == nil ? "No cleanup scan has been run." : "No cleanup candidates found.")
+                Text(snapshot == nil ? L10n.string("cleanup.empty.notRun") : L10n.string("cleanup.empty.found"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
                 HStack {
-                    Button("Select recommended") {
+                    Button(L10n.string("cleanup.selectRecommended")) {
                         selectedIDs = Set(candidates.filter(\.defaultSelected).map(\.id))
                     }
                     .disabled(isScanning || isCleaning)
 
-                    Button("Clear") {
+                    Button(L10n.string("common.clear")) {
                         selectedIDs.removeAll()
                     }
                     .disabled(selectedIDs.isEmpty || isScanning || isCleaning)
 
                     Spacer()
 
-                    Text("\(selectedCandidates.count) selected, \(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))")
+                    Text(L10n.format("cleanup.selectedSummary", selectedCandidates.count, ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file)))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -124,16 +124,16 @@ struct CleanupReviewView: View {
         .padding(16)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .confirmationDialog(
-            "Move selected cleanup items to Trash?",
+            L10n.string("cleanup.confirm.title"),
             isPresented: $confirmingCleanup,
             titleVisibility: .visible
         ) {
-            Button("Move to Trash", role: .destructive) {
+            Button(L10n.string("common.moveToTrash"), role: .destructive) {
                 clean()
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.string("common.cancel"), role: .cancel) {}
         } message: {
-            Text("\(selectedCandidates.count) item(s), \(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file)).")
+            Text(L10n.format("cleanup.confirm.message", selectedCandidates.count, ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file)))
         }
     }
 }
@@ -156,7 +156,7 @@ private struct CleanupCandidateRow: View {
                             .lineLimit(1)
 
                         if candidate.defaultSelected {
-                            Text("Recommended")
+                            Text(L10n.string("cleanup.recommended"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 6)
@@ -165,7 +165,7 @@ private struct CleanupCandidateRow: View {
                         }
                     }
 
-                    Text("\(candidate.kind.title) - \(candidate.reason)")
+                    Text("\(candidate.kind.localizedTitle) - \(localizedCleanupReason(candidate.reason))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
