@@ -23,6 +23,9 @@
 "cleanup.empty.found" = "Кандидаты для очистки не найдены.";
 "cleanup.empty.notRun" = "Сканирование очистки еще не запускалось.";
 "cleanup.kind.downloadedInstaller" = "Загруженный установщик";
+"cleanup.kind.appContainerCache" = "Кэш контейнера приложения";
+"cleanup.kind.developerCache" = "Кэш разработки";
+"cleanup.kind.packageManagerCache" = "Кэш менеджера пакетов";
 "cleanup.kind.temporaryFile" = "Временный файл";
 "cleanup.kind.userCache" = "Кэш пользователя";
 "cleanup.kind.userLog" = "Журнал пользователя";
@@ -30,10 +33,13 @@
 "cleanup.notice.failedOnly" = "Ничего не перемещено. Ошибок: %d.";
 "cleanup.notice.mixed" = "Перемещено в Корзину: %d, ошибок: %d.";
 "cleanup.notice.trashed" = "Перемещено в Корзину: %d, выбрано %@.";
-"cleanup.reason.downloadedInstaller" = "Старый загруженный установщик или архив";
-"cleanup.reason.temporaryFile" = "Старый временный объект";
-"cleanup.reason.userCache" = "Старый объект кэша пользователя";
-"cleanup.reason.userLog" = "Старый объект журнала пользователя";
+"cleanup.reason.downloadedInstaller" = "Загруженный установщик или архив";
+"cleanup.reason.appContainerCache" = "Объект кэша контейнера приложения";
+"cleanup.reason.developerCache" = "Объект кэша разработки";
+"cleanup.reason.packageManagerCache" = "Объект кэша менеджера пакетов";
+"cleanup.reason.temporaryFile" = "Временный объект";
+"cleanup.reason.userCache" = "Объект кэша пользователя";
+"cleanup.reason.userLog" = "Объект журнала пользователя";
 "cleanup.recommended" = "Рекомендуется";
 "cleanup.scan" = "Сканировать";
 "cleanup.selectedSummary" = "Выбрано: %d, %@";

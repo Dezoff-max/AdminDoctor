@@ -39,6 +39,42 @@ final class DiskCleanupServiceTests: XCTestCase {
         XCTAssertEqual(snapshot.candidates.first?.defaultSelected, true)
     }
 
+    func testScanIncludesFreshItemsButOnlyRecommendsOldItems() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let oldDirectory = root.appendingPathComponent("old-cache", isDirectory: true)
+        let freshDirectory = root.appendingPathComponent("fresh-cache", isDirectory: true)
+        try FileManager.default.createDirectory(at: oldDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: freshDirectory, withIntermediateDirectories: true)
+        try Data(repeating: 1, count: 512).write(to: oldDirectory.appendingPathComponent("payload.bin"))
+        try Data(repeating: 2, count: 512).write(to: freshDirectory.appendingPathComponent("payload.bin"))
+
+        let now = Date(timeIntervalSince1970: 50_000)
+        try setModificationDate(now.addingTimeInterval(-8.days), for: oldDirectory)
+        try setModificationDate(now.addingTimeInterval(-2.hours), for: freshDirectory)
+
+        let service = DiskCleanupService(
+            scopes: [
+                CleanupScope(
+                    root: root,
+                    kind: .userCache,
+                    minimumAge: 0,
+                    defaultSelected: true,
+                    reason: "test",
+                    defaultSelectionMinimumAge: 7.days
+                )
+            ],
+            now: { now }
+        )
+
+        let snapshot = try service.scan()
+
+        XCTAssertEqual(Set(snapshot.candidates.map(\.displayName)), ["old-cache", "fresh-cache"])
+        XCTAssertEqual(snapshot.candidates.first { $0.displayName == "old-cache" }?.defaultSelected, true)
+        XCTAssertEqual(snapshot.candidates.first { $0.displayName == "fresh-cache" }?.defaultSelected, false)
+    }
+
     func testMoveToTrashRejectsPathsOutsideCleanupScopes() throws {
         let root = try makeTemporaryDirectory()
         let outside = try makeTemporaryDirectory()
@@ -93,4 +129,5 @@ final class DiskCleanupServiceTests: XCTestCase {
 
 private extension Int {
     var days: TimeInterval { TimeInterval(self) * 86_400 }
+    var hours: TimeInterval { TimeInterval(self) * 3_600 }
 }

@@ -41,14 +41,28 @@ extension AdminPrivilegeStatus {
 
 func localizedCleanupReason(_ reason: String) -> String {
     switch reason {
+    case "User cache item":
+        return L10n.string("cleanup.reason.userCache")
     case "Older user cache item":
         return L10n.string("cleanup.reason.userCache")
+    case "Container cache item":
+        return L10n.string("cleanup.reason.appContainerCache")
+    case "Temporary item":
+        return L10n.string("cleanup.reason.temporaryFile")
     case "Older temporary item":
         return L10n.string("cleanup.reason.temporaryFile")
+    case "User log item":
+        return L10n.string("cleanup.reason.userLog")
     case "Older user log item":
         return L10n.string("cleanup.reason.userLog")
+    case "Downloaded installer or archive":
+        return L10n.string("cleanup.reason.downloadedInstaller")
     case "Older downloaded installer or archive":
         return L10n.string("cleanup.reason.downloadedInstaller")
+    case "Developer cache item":
+        return L10n.string("cleanup.reason.developerCache")
+    case "Package manager cache item":
+        return L10n.string("cleanup.reason.packageManagerCache")
     default:
         return reason
     }

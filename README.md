@@ -89,7 +89,7 @@ Implemented checks:
 
 Safe utility actions:
 
-- scan user cache, temporary, user log, and old installer/archive locations
+- scan user cache, app container cache, temporary, user log, installer/archive, developer cache, and package manager cache locations
 - preselect only conservative cleanup candidates
 - require confirmation before cleanup
 - move selected items to Trash for review or restore

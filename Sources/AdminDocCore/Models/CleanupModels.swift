@@ -2,20 +2,29 @@ import Foundation
 
 public enum CleanupCandidateKind: String, CaseIterable, Codable, Sendable {
     case userCache
+    case appContainerCache
     case temporaryFile
     case userLog
     case downloadedInstaller
+    case developerCache
+    case packageManagerCache
 
     public var title: String {
         switch self {
         case .userCache:
             return "User cache"
+        case .appContainerCache:
+            return "App container cache"
         case .temporaryFile:
             return "Temporary file"
         case .userLog:
             return "User log"
         case .downloadedInstaller:
             return "Downloaded installer"
+        case .developerCache:
+            return "Developer cache"
+        case .packageManagerCache:
+            return "Package manager cache"
         }
     }
 
@@ -23,12 +32,18 @@ public enum CleanupCandidateKind: String, CaseIterable, Codable, Sendable {
         switch self {
         case .userCache:
             return "externaldrive.badge.timemachine"
+        case .appContainerCache:
+            return "app.badge"
         case .temporaryFile:
             return "clock.arrow.circlepath"
         case .userLog:
             return "doc.text"
         case .downloadedInstaller:
             return "shippingbox"
+        case .developerCache:
+            return "hammer"
+        case .packageManagerCache:
+            return "archivebox"
         }
     }
 }
