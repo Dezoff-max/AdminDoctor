@@ -1,10 +1,10 @@
 # Security Policy
 
-AdminDoc is designed for local diagnostics plus explicitly confirmed, reversible admin utilities.
+AdminDoctor is designed for local diagnostics plus explicitly confirmed, reversible admin utilities.
 
 ## Supported Versions
 
-AdminDoc is pre-1.0. Security fixes are accepted on `main` until release branches exist.
+AdminDoctor is pre-1.0. Security fixes are accepted on `main` until release branches exist.
 
 ## Reporting A Vulnerability
 
@@ -19,7 +19,7 @@ Please report vulnerabilities privately through GitHub Security Advisories when 
 
 ## Privacy Expectations
 
-AdminDoc must not:
+AdminDoctor must not:
 
 - execute shell `sudo`
 - run irreversible cleanup commands
@@ -39,7 +39,7 @@ Safe cleanup utilities must:
 
 ## Administrator Authorization
 
-AdminDoc requests administrator authorization at launch through macOS Authorization Services. The app stores the resulting authorization reference only in memory for the current app session.
+AdminDoctor requests administrator authorization at launch through macOS Authorization Services. The app stores the resulting authorization reference only in memory for the current app session.
 
 This does not make the SwiftUI process run as root. Future privileged operations must use explicit, reviewed code paths and should move to a signed privileged helper before touching system-owned state.
 

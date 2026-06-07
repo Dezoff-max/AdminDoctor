@@ -3,38 +3,38 @@
 import PackageDescription
 
 let package = Package(
-    name: "AdminDoc",
+    name: "AdminDoctor",
     defaultLocalization: "en",
     platforms: [
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "AdminDoc", targets: ["AdminDoc"]),
-        .executable(name: "AdminDocPrivilegedHelper", targets: ["AdminDocPrivilegedHelper"]),
-        .library(name: "AdminDocCore", targets: ["AdminDocCore"])
+        .executable(name: "AdminDoctor", targets: ["AdminDoctor"]),
+        .executable(name: "AdminDoctorPrivilegedHelper", targets: ["AdminDoctorPrivilegedHelper"]),
+        .library(name: "AdminDoctorCore", targets: ["AdminDoctorCore"])
     ],
     targets: [
         .target(
-            name: "AdminDocCore",
-            path: "Sources/AdminDocCore",
+            name: "AdminDoctorCore",
+            path: "Sources/AdminDoctorCore",
             resources: [
                 .process("Resources")
             ]
         ),
         .executableTarget(
-            name: "AdminDoc",
-            dependencies: ["AdminDocCore"],
-            path: "Sources/AdminDoc"
+            name: "AdminDoctor",
+            dependencies: ["AdminDoctorCore"],
+            path: "Sources/AdminDoctor"
         ),
         .executableTarget(
-            name: "AdminDocPrivilegedHelper",
-            dependencies: ["AdminDocCore"],
-            path: "Sources/AdminDocPrivilegedHelper"
+            name: "AdminDoctorPrivilegedHelper",
+            dependencies: ["AdminDoctorCore"],
+            path: "Sources/AdminDoctorPrivilegedHelper"
         ),
         .testTarget(
-            name: "AdminDocCoreTests",
-            dependencies: ["AdminDocCore"],
-            path: "Tests/AdminDocCoreTests"
+            name: "AdminDoctorCoreTests",
+            dependencies: ["AdminDoctorCore"],
+            path: "Tests/AdminDoctorCoreTests"
         )
     ]
 )

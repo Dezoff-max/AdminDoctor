@@ -1,25 +1,25 @@
-# AdminDoc
+# AdminDoctor
 
-AdminDoc is a privacy-first macOS diagnostic and admin utility app for system administrators, helpdesk engineers, and Mac fleet maintainers.
+AdminDoctor is a privacy-first macOS diagnostic and admin utility app for system administrators, helpdesk engineers, and Mac fleet maintainers.
 
 The app runs local checks, explains findings clearly, offers carefully scoped safe utilities, and exports a redacted support report that can be shared without exposing unnecessary personal data.
 
-![AdminDoc storage cleanup screenshot](Docs/Assets/AdminDoc-storage-en.png)
+![AdminDoctor storage cleanup screenshot](Docs/Assets/AdminDoctor-storage-en.png)
 
 ## Installation
 
 English:
 
-1. Download `AdminDoc.dmg` from the latest GitHub Release.
-2. Open the DMG and drag `AdminDoc.app` to Applications.
-3. If macOS blocks this unsigned build, prefer Control-clicking `AdminDoc.app`, choosing **Open**, then confirming **Open**.
+1. Download `AdminDoctor.dmg` from the latest GitHub Release.
+2. Open the DMG and drag `AdminDoctor.app` to Applications.
+3. If macOS blocks this unsigned build, prefer Control-clicking `AdminDoctor.app`, choosing **Open**, then confirming **Open**.
 4. Internal/testing workaround only: if your organization allows temporarily disabling Gatekeeper, run:
 
 ```sh
 sudo spctl --master-disable
 ```
 
-Open AdminDoc, then re-enable Gatekeeper immediately:
+Open AdminDoctor, then re-enable Gatekeeper immediately:
 
 ```sh
 sudo spctl --master-enable
@@ -27,16 +27,16 @@ sudo spctl --master-enable
 
 Русский:
 
-1. Скачайте `AdminDoc.dmg` из последнего GitHub Release.
-2. Откройте DMG и перетащите `AdminDoc.app` в папку «Программы».
-3. Если macOS блокирует неподписанную сборку, сначала используйте более безопасный вариант: Control-click / правый клик по `AdminDoc.app`, выберите **Открыть**, затем подтвердите **Открыть**.
+1. Скачайте `AdminDoctor.dmg` из последнего GitHub Release.
+2. Откройте DMG и перетащите `AdminDoctor.app` в папку «Программы».
+3. Если macOS блокирует неподписанную сборку, сначала используйте более безопасный вариант: Control-click / правый клик по `AdminDoctor.app`, выберите **Открыть**, затем подтвердите **Открыть**.
 4. Только для внутреннего тестирования: если политика вашей организации разрешает временно отключить Gatekeeper, выполните:
 
 ```sh
 sudo spctl --master-disable
 ```
 
-Откройте AdminDoc, затем сразу включите Gatekeeper обратно:
+Откройте AdminDoctor, затем сразу включите Gatekeeper обратно:
 
 ```sh
 sudo spctl --master-enable
@@ -55,7 +55,7 @@ sudo spctl --master-enable
 
 ## MVP Scope
 
-AdminDoc is a SwiftPM-based native macOS SwiftUI app with a reusable `AdminDocCore` library.
+AdminDoctor is a SwiftPM-based native macOS SwiftUI app with a reusable `AdminDoctorCore` library.
 
 Implemented categories:
 
@@ -93,6 +93,7 @@ Implemented checks:
 - system proxy state
 - Wi-Fi SSID signal when available
 - local LAN scan with ARP discovery, hostname hints, and offline IEEE OUI manufacturer lookup
+- user-initiated network ping and traceroute toolkit
 - MDM enrollment signal
 - installed configuration profile signal
 - LaunchAgent and LaunchDaemon plist validation and startup item listing
@@ -110,6 +111,13 @@ Safe utility actions:
 - move selected items to Trash for review or restore
 - clear the local DNS cache with `dscacheutil -flushcache`
 - scan the local /24 LAN view and clear displayed LAN scan results
+- run on-demand ping and traceroute checks from the local Mac
+
+Interface helpers:
+
+- compact CPU, RAM, disk, and network resource indicators
+- local scan history with fail/warning/pass counts
+- EN/RUS language switch in the sidebar
 
 ## Privacy
 
@@ -123,33 +131,33 @@ Markdown and JSON exports are redacted by default. The redactor currently handle
 - MAC addresses
 - Wi-Fi SSID when present in diagnostic results
 
-AdminDoc does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services. LAN manufacturer lookup uses bundled IEEE Registration Authority CSV data and does not make runtime vendor lookup requests.
+AdminDoctor does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services. LAN manufacturer lookup uses bundled IEEE Registration Authority CSV data and does not make runtime vendor lookup requests.
 
 ## Architecture
 
 ```text
 Sources/
-  AdminDoc/
+  AdminDoctor/
     App/
     Views/
-  AdminDocCore/
+  AdminDoctorCore/
     Models/
     Providers/
     Services/
     Support/
 Tests/
-  AdminDocCoreTests/
+  AdminDoctorCoreTests/
 ```
 
 Key boundaries:
 
-- SwiftUI views live in `Sources/AdminDoc`.
-- Diagnostic logic lives in `Sources/AdminDocCore`.
+- SwiftUI views live in `Sources/AdminDoctor`.
+- Diagnostic logic lives in `Sources/AdminDoctorCore`.
 - Command execution goes through `CommandRunning`.
 - `ProcessRunner` rejects shell and sudo executables and runs fixed executable paths with arguments.
 - Administrator authorization state is handled by `AdminPrivilegeManager`.
 - Safe cleanup logic lives in `DiskCleanupService`, only trashes configured non-privileged locations, and marks system cleanup candidates as helper-required.
-- `AdminDocPrivilegedHelper` is a read-only scaffold for future signed helper work; privileged deletion is intentionally not implemented yet.
+- `AdminDoctorPrivilegedHelper` is a read-only scaffold for future signed helper work; privileged deletion is intentionally not implemented yet.
 - Providers are small and independently testable.
 - Report export is handled by `ReportExporter`.
 
@@ -175,7 +183,7 @@ Regenerate icons and build a local DMG:
 ./script/build_dmg.sh
 ```
 
-The app and DMG icons are generated locally from `Resources/Icons/AdminDocIconSource.png`. `script/render_icon.swift` is a fallback source generator if the PNG is missing; generated `.icns` and `.iconset` outputs are intentionally ignored by git.
+The app and DMG icons are generated locally from `Resources/Icons/AdminDoctorIconSource.png`. `script/render_icon.swift` is a fallback source generator if the PNG is missing; generated `.icns` and `.iconset` outputs are intentionally ignored by git.
 
 The Codex app Run button is wired through `.codex/environments/environment.toml`.
 
@@ -190,7 +198,7 @@ ZIP support bundles are intentionally left for a later milestone because they ne
 
 ## Status
 
-AdminDoc is an early MVP skeleton. It is useful for local first-pass diagnostics, but not yet a replacement for a signed, notarized admin support utility.
+AdminDoctor is an early MVP skeleton. It is useful for local first-pass diagnostics, but not yet a replacement for a signed, notarized admin support utility.
 
 See [ROADMAP.md](./ROADMAP.md) for next milestones.
 

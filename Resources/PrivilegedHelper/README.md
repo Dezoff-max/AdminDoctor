@@ -1,14 +1,14 @@
-# AdminDoc Privileged Helper Scaffold
+# AdminDoctor Privileged Helper Scaffold
 
-AdminDoc can scan user-scoped cleanup locations directly and move selected user items to Trash. System cleanup locations such as `/Library/Caches` and `/Library/Logs` are intentionally marked as `requiresHelper` in the main app.
+AdminDoctor can scan user-scoped cleanup locations directly and move selected user items to Trash. System cleanup locations such as `/Library/Caches` and `/Library/Logs` are intentionally marked as `requiresHelper` in the main app.
 
-The `AdminDocPrivilegedHelper` executable target is a development scaffold for the future signed helper. It currently supports only read-only JSON scanning:
+The `AdminDoctorPrivilegedHelper` executable target is a development scaffold for the future signed helper. It currently supports only read-only JSON scanning:
 
 ```sh
-swift run AdminDocPrivilegedHelper scan-system-cleanup
+swift run AdminDoctorPrivilegedHelper scan-system-cleanup
 ```
 
-Deletion from privileged locations is not implemented here. Before AdminDoc can safely clean system paths, the helper must be:
+Deletion from privileged locations is not implemented here. Before AdminDoctor can safely clean system paths, the helper must be:
 
 - signed with the same Team ID as the app
 - installed and updated through `SMAppService`

@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ICON_ROOT="$ROOT_DIR/Resources/Icons"
-SOURCE_ICON="$ICON_ROOT/AdminDocIconSource.png"
+SOURCE_ICON="$ICON_ROOT/AdminDoctorIconSource.png"
 APP_ICONSET="$ICON_ROOT/AppIcon.iconset"
 DMG_ICONSET="$ICON_ROOT/DMGIcon.iconset"
 RENDER_SCRIPT="$ROOT_DIR/script/render_icon.swift"
@@ -38,9 +38,9 @@ generate_iconset() {
 generate_iconset "$APP_ICONSET"
 generate_iconset "$DMG_ICONSET"
 
-/usr/bin/iconutil -c icns "$APP_ICONSET" -o "$ICON_ROOT/AdminDoc.icns"
-/usr/bin/iconutil -c icns "$DMG_ICONSET" -o "$ICON_ROOT/AdminDocDMG.icns"
+/usr/bin/iconutil -c icns "$APP_ICONSET" -o "$ICON_ROOT/AdminDoctor.icns"
+/usr/bin/iconutil -c icns "$DMG_ICONSET" -o "$ICON_ROOT/AdminDoctorDMG.icns"
 
 echo "Generated:"
-echo "  $ICON_ROOT/AdminDoc.icns"
-echo "  $ICON_ROOT/AdminDocDMG.icns"
+echo "  $ICON_ROOT/AdminDoctor.icns"
+echo "  $ICON_ROOT/AdminDoctorDMG.icns"

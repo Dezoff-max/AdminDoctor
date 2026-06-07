@@ -1,16 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_NAME="AdminDoc"
-VOLUME_NAME="AdminDoc"
+APP_NAME="AdminDoctor"
+VOLUME_NAME="AdminDoctor"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 DMG_ROOT="$DIST_DIR/dmg-root"
 DMG_PATH="$DIST_DIR/$APP_NAME.dmg"
-DMG_ICON="$ROOT_DIR/Resources/Icons/AdminDocDMG.icns"
-INSTALL_README="$ROOT_DIR/Resources/Install/Install AdminDoc.txt"
+DMG_ICON="$ROOT_DIR/Resources/Icons/AdminDoctorDMG.icns"
+INSTALL_README="$ROOT_DIR/Resources/Install/Install AdminDoctor.txt"
 
 if [[ ! -f "$DMG_ICON" ]]; then
   bash "$ROOT_DIR/script/generate_icons.sh"
@@ -30,7 +30,7 @@ cp -R "$APP_BUNDLE" "$DMG_ROOT/$APP_NAME.app"
 ln -s /Applications "$DMG_ROOT/Applications"
 
 if [[ -f "$INSTALL_README" ]]; then
-  cp "$INSTALL_README" "$DMG_ROOT/Install AdminDoc.txt"
+  cp "$INSTALL_README" "$DMG_ROOT/Install AdminDoctor.txt"
 fi
 
 if [[ -f "$DMG_ICON" ]]; then
@@ -43,7 +43,7 @@ if [[ -f "$DMG_ICON" ]]; then
 fi
 
 set_dmg_file_icon() {
-  local source_png="$ROOT_DIR/Resources/Icons/AdminDocIconSource.png"
+  local source_png="$ROOT_DIR/Resources/Icons/AdminDoctorIconSource.png"
   local tmp_icon
   local tmp_rsrc
 
@@ -53,8 +53,8 @@ set_dmg_file_icon() {
   command -v SetFile >/dev/null 2>&1 || return 0
   [[ -f "$source_png" ]] || return 0
 
-  tmp_icon="$(mktemp -t admindoc-dmg-icon).png"
-  tmp_rsrc="$(mktemp -t admindoc-dmg-icon).rsrc"
+  tmp_icon="$(mktemp -t admindoctor-dmg-icon).png"
+  tmp_rsrc="$(mktemp -t admindoctor-dmg-icon).rsrc"
   cp "$source_png" "$tmp_icon"
 
   if sips -i "$tmp_icon" >/dev/null 2>&1 &&

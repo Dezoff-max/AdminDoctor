@@ -1,6 +1,6 @@
 # Roadmap
 
-AdminDoc is a privacy-first macOS diagnostics app for system administrators, helpdesk engineers, and Mac fleet maintainers.
+AdminDoctor is a privacy-first macOS diagnostics app for system administrators, helpdesk engineers, and Mac fleet maintainers.
 
 ## v0.1.0 - MVP Diagnostics
 
@@ -77,6 +77,15 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [x] Add Software Update security setting signals.
 - [x] Add recent Apple security-related install history.
 
+## v0.1.7 - AdminDoctor Rename And Toolkit UI
+
+- [x] Rename the app, Swift package, targets, bundle, docs, scripts, and release artifacts to AdminDoctor.
+- [x] Add EN/RUS language switching in the sidebar.
+- [x] Add compact CPU, RAM, disk, and network resource indicators.
+- [x] Add local scan history with status counts and warning hints.
+- [x] Add user-initiated ping and traceroute tools in Network.
+- [x] Update GitHub Actions checkout to a Node 24-ready action version.
+
 ## v0.2.0 - Admin Toolkit Foundation
 
 - [ ] Add a tools sidebar model separate from diagnostic categories.
@@ -124,7 +133,8 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 
 ## v0.7.0 - Swiss Army Admin Tools
 
-- [ ] Network quick tests: DNS lookup, ping, route, captive portal signal, proxy reachability.
+- [x] Network quick tests: ping and traceroute.
+- [ ] Network quick tests: DNS lookup, route, captive portal signal, proxy reachability.
 - [ ] Permissions inspector: app TCC status, Full Disk Access signal, accessibility permission signal.
 - [ ] App inventory: signed/notarized status, quarantine flag, architecture, last opened date.
 - [ ] Login items and background services inspector.
@@ -145,7 +155,7 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 
 ## Future Ideas
 
-- [ ] CLI companion: `admindoc`.
+- [ ] CLI companion: `admindoctor`.
 - [ ] Compare two reports.
 - [ ] Fleet baseline templates.
 - [ ] Jamf, Kandji, Mosyle, and Intune-oriented check presets.

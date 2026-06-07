@@ -1,7 +1,7 @@
 #!/usr/bin/swift
 import AppKit
 
-let outputPath = CommandLine.arguments.dropFirst().first ?? "Resources/Icons/AdminDocIconSource.png"
+let outputPath = CommandLine.arguments.dropFirst().first ?? "Resources/Icons/AdminDoctorIconSource.png"
 let outputURL = URL(fileURLWithPath: outputPath)
 
 try FileManager.default.createDirectory(

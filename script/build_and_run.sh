@@ -2,8 +2,8 @@
 set -euo pipefail
 
 MODE="${1:-run}"
-APP_NAME="AdminDoc"
-BUNDLE_ID="dev.admindoc.AdminDoc"
+APP_NAME="AdminDoctor"
+BUNDLE_ID="dev.admindoctor.AdminDoctor"
 MIN_SYSTEM_VERSION="13.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -14,9 +14,9 @@ APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
-APP_ICON_SOURCE="$ROOT_DIR/Resources/Icons/AdminDoc.icns"
+APP_ICON_SOURCE="$ROOT_DIR/Resources/Icons/AdminDoctor.icns"
 ICON_SCRIPT="$ROOT_DIR/script/generate_icons.sh"
-LOCALIZATION_ROOT="$ROOT_DIR/Sources/AdminDoc/Resources"
+LOCALIZATION_ROOT="$ROOT_DIR/Sources/AdminDoctor/Resources"
 
 cd "$ROOT_DIR"
 
@@ -38,7 +38,7 @@ cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 
 if [[ -f "$APP_ICON_SOURCE" ]]; then
-  cp "$APP_ICON_SOURCE" "$APP_RESOURCES/AdminDoc.icns"
+  cp "$APP_ICON_SOURCE" "$APP_RESOURCES/AdminDoctor.icns"
 fi
 
 if [[ -d "$LOCALIZATION_ROOT" ]]; then
@@ -59,7 +59,7 @@ cat >"$INFO_PLIST" <<PLIST
   <key>CFBundleIdentifier</key>
   <string>$BUNDLE_ID</string>
   <key>CFBundleIconFile</key>
-  <string>AdminDoc</string>
+  <string>AdminDoctor</string>
   <key>CFBundleLocalizations</key>
   <array>
     <string>en</string>

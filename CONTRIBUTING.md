@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve AdminDoc.
+Thanks for helping improve AdminDoctor.
 
 ## Project Rules
 
