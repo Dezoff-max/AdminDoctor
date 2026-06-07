@@ -10,6 +10,7 @@ let package = Package(
     ],
     products: [
         .executable(name: "AdminDoc", targets: ["AdminDoc"]),
+        .executable(name: "AdminDocPrivilegedHelper", targets: ["AdminDocPrivilegedHelper"]),
         .library(name: "AdminDocCore", targets: ["AdminDocCore"])
     ],
     targets: [
@@ -21,6 +22,11 @@ let package = Package(
             name: "AdminDoc",
             dependencies: ["AdminDocCore"],
             path: "Sources/AdminDoc"
+        ),
+        .executableTarget(
+            name: "AdminDocPrivilegedHelper",
+            dependencies: ["AdminDocCore"],
+            path: "Sources/AdminDocPrivilegedHelper"
         ),
         .testTarget(
             name: "AdminDocCoreTests",

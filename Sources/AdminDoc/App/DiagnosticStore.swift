@@ -123,7 +123,7 @@ final class DiagnosticStore: ObservableObject {
         switch result {
         case .success(let snapshot):
             cleanupSnapshot = snapshot
-            selectedCleanupIDs = Set(snapshot.candidates.filter(\.defaultSelected).map(\.id))
+            selectedCleanupIDs = Set(snapshot.candidates.filter { $0.defaultSelected && !$0.requiresPrivilegedHelper }.map(\.id))
         case .failure(let error):
             cleanupError = error.localizedDescription
         }
@@ -139,7 +139,7 @@ final class DiagnosticStore: ObservableObject {
             return
         }
 
-        let selectedCandidates = snapshot.candidates.filter { selectedCleanupIDs.contains($0.id) }
+        let selectedCandidates = snapshot.candidates.filter { selectedCleanupIDs.contains($0.id) && !$0.requiresPrivilegedHelper }
         guard !selectedCandidates.isEmpty else {
             cleanupNotice = L10n.string("cleanup.noSelection")
             return

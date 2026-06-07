@@ -4,6 +4,8 @@ AdminDoc is a privacy-first macOS diagnostic and admin utility app for system ad
 
 The app runs local checks, explains findings clearly, offers carefully scoped safe utilities, and exports a redacted support report that can be shared without exposing unnecessary personal data.
 
+![AdminDoc storage cleanup screenshot](Docs/Assets/AdminDoc-storage-en.png)
+
 ## Installation
 
 English:
@@ -89,8 +91,12 @@ Implemented checks:
 
 Safe utility actions:
 
-- scan user cache, app container cache, temporary, user log, installer/archive, developer cache, and package manager cache locations
+- scan user cache, temporary, user log, installer/archive, developer cache, package manager cache, and helper-required system cache/log locations
+- group cleanup candidates by source such as npm, Homebrew, Xcode, SwiftPM, Cargo, Gradle, and pip
+- label cleanup risk as safe, caution, manual review, or helper required
+- show system cache and log candidates as helper-required read-only findings
 - preselect only conservative cleanup candidates
+- select or clear cleanup candidates by group
 - require confirmation before cleanup
 - move selected items to Trash for review or restore
 - clear the local DNS cache with `dscacheutil -flushcache`
@@ -132,7 +138,8 @@ Key boundaries:
 - Command execution goes through `CommandRunning`.
 - `ProcessRunner` rejects shell and sudo executables and runs fixed executable paths with arguments.
 - Administrator authorization state is handled by `AdminPrivilegeManager`.
-- Safe cleanup logic lives in `DiskCleanupService` and only operates on configured user-scoped locations.
+- Safe cleanup logic lives in `DiskCleanupService`, only trashes configured non-privileged locations, and marks system cleanup candidates as helper-required.
+- `AdminDocPrivilegedHelper` is a read-only scaffold for future signed helper work; privileged deletion is intentionally not implemented yet.
 - Providers are small and independently testable.
 - Report export is handled by `ReportExporter`.
 

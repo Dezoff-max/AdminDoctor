@@ -48,6 +48,11 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 - [x] Keep authorization state in memory for the current app session.
 - [x] Show admin authorization status in the dashboard header.
 - [x] Add a Network button to clear the local DNS cache.
+- [x] Group storage cleanup candidates by source.
+- [x] Add cleanup risk labels: safe, caution, manual review, helper required.
+- [x] Show system cache and log cleanup candidates as helper-required read-only findings.
+- [x] Add a read-only privileged helper scaffold for future system cleanup.
+- [x] Keep broad app container scans out of the default GUI path until Full Disk Access/helper support is designed.
 - [x] Add reproducible app and DMG icon generation.
 - [x] Avoid shell `sudo` execution.
 

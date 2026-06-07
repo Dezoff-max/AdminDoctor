@@ -29,6 +29,12 @@ extension CleanupCandidateKind {
     }
 }
 
+extension CleanupRisk {
+    var localizedTitle: String {
+        L10n.string("cleanup.risk.\(rawValue)")
+    }
+}
+
 extension AdminPrivilegeStatus {
     var localizedTitle: String {
         L10n.string("admin.status.\(rawValue)")
@@ -55,6 +61,10 @@ func localizedCleanupReason(_ reason: String) -> String {
         return L10n.string("cleanup.reason.userLog")
     case "Older user log item":
         return L10n.string("cleanup.reason.userLog")
+    case "System cache item":
+        return L10n.string("cleanup.reason.systemCache")
+    case "System log item":
+        return L10n.string("cleanup.reason.systemLog")
     case "Downloaded installer or archive":
         return L10n.string("cleanup.reason.downloadedInstaller")
     case "Older downloaded installer or archive":
@@ -65,5 +75,29 @@ func localizedCleanupReason(_ reason: String) -> String {
         return L10n.string("cleanup.reason.packageManagerCache")
     default:
         return reason
+    }
+}
+
+func localizedCleanupGroupTitle(identifier: String, fallback: String) -> String {
+    switch identifier {
+    case "npm":
+        return L10n.string("cleanup.group.npm")
+    case "homebrew":
+        return L10n.string("cleanup.group.homebrew")
+    case "xcode":
+        return L10n.string("cleanup.group.xcode")
+    case "gradle":
+        return L10n.string("cleanup.group.gradle")
+    case "cargo":
+        return L10n.string("cleanup.group.cargo")
+    case "swiftpm":
+        return L10n.string("cleanup.group.swiftpm")
+    case "pip":
+        return L10n.string("cleanup.group.pip")
+    default:
+        if CleanupCandidateKind(rawValue: identifier) != nil {
+            return L10n.string("cleanup.kind.\(identifier)")
+        }
+        return fallback
     }
 }

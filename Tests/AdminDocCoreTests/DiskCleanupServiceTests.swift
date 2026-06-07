@@ -75,6 +75,38 @@ final class DiskCleanupServiceTests: XCTestCase {
         XCTAssertEqual(snapshot.candidates.first { $0.displayName == "fresh-cache" }?.defaultSelected, false)
     }
 
+    func testScanAssignsCleanupRiskAndGroupMetadata() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let npmCache = root.appendingPathComponent(".npm/_cacache", isDirectory: true)
+        try FileManager.default.createDirectory(at: npmCache, withIntermediateDirectories: true)
+        let payload = npmCache.appendingPathComponent("index.bin")
+        try Data(repeating: 4, count: 512).write(to: payload)
+
+        let service = DiskCleanupService(
+            scopes: [
+                CleanupScope(
+                    root: npmCache,
+                    kind: .packageManagerCache,
+                    risk: .manualReview,
+                    minimumAge: 0,
+                    defaultSelected: false,
+                    reason: "Package manager cache item"
+                )
+            ]
+        )
+
+        let snapshot = try service.scan()
+        let candidate = try XCTUnwrap(snapshot.candidates.first)
+
+        XCTAssertEqual(candidate.displayName, "index.bin")
+        XCTAssertEqual(candidate.risk, .manualReview)
+        XCTAssertEqual(candidate.groupIdentifier, "npm")
+        XCTAssertEqual(candidate.groupTitle, "npm cache")
+        XCTAssertFalse(candidate.requiresPrivilegedHelper)
+    }
+
     func testMoveToTrashRejectsPathsOutsideCleanupScopes() throws {
         let root = try makeTemporaryDirectory()
         let outside = try makeTemporaryDirectory()
@@ -113,6 +145,47 @@ final class DiskCleanupServiceTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: outsideFile.path))
         XCTAssertTrue(summary.trashed.isEmpty)
         XCTAssertEqual(summary.failures.count, 1)
+    }
+
+    func testMoveToTrashRejectsPrivilegedHelperCandidates() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let systemCandidate = root.appendingPathComponent("system-cache")
+        try Data("system".utf8).write(to: systemCandidate)
+
+        let service = DiskCleanupService(
+            scopes: [
+                CleanupScope(
+                    root: root,
+                    kind: .systemCache,
+                    risk: .requiresHelper,
+                    minimumAge: 0,
+                    defaultSelected: false,
+                    reason: "System cache item",
+                    requiresPrivilegedHelper: true
+                )
+            ]
+        )
+
+        let summary = service.moveToTrash([
+            CleanupCandidate(
+                kind: .systemCache,
+                risk: .requiresHelper,
+                path: systemCandidate.path,
+                displayName: systemCandidate.lastPathComponent,
+                byteCount: 6,
+                modifiedAt: nil,
+                defaultSelected: false,
+                requiresPrivilegedHelper: true,
+                reason: "System cache item"
+            )
+        ])
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: systemCandidate.path))
+        XCTAssertTrue(summary.trashed.isEmpty)
+        XCTAssertEqual(summary.failures.count, 1)
+        XCTAssertTrue(summary.failures[0].message.contains("Privileged helper"))
     }
 
     private func makeTemporaryDirectory() throws -> URL {

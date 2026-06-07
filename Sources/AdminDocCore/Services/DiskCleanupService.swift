@@ -1,11 +1,14 @@
+import Darwin
 import Foundation
 
 public struct CleanupScope: Equatable, Sendable {
     public var root: URL
     public var kind: CleanupCandidateKind
+    public var risk: CleanupRisk
     public var minimumAge: TimeInterval
     public var defaultSelected: Bool
     public var defaultSelectionMinimumAge: TimeInterval?
+    public var requiresPrivilegedHelper: Bool
     public var reason: String
     public var allowedExtensions: Set<String>?
     public var includeDirectories: Bool
@@ -14,19 +17,23 @@ public struct CleanupScope: Equatable, Sendable {
     public init(
         root: URL,
         kind: CleanupCandidateKind,
+        risk: CleanupRisk = .manualReview,
         minimumAge: TimeInterval,
         defaultSelected: Bool,
         reason: String,
         allowedExtensions: Set<String>? = nil,
         defaultSelectionMinimumAge: TimeInterval? = nil,
+        requiresPrivilegedHelper: Bool = false,
         includeDirectories: Bool = true,
         includeRegularFiles: Bool = true
     ) {
         self.root = root
         self.kind = kind
+        self.risk = risk
         self.minimumAge = minimumAge
         self.defaultSelected = defaultSelected
         self.defaultSelectionMinimumAge = defaultSelectionMinimumAge
+        self.requiresPrivilegedHelper = requiresPrivilegedHelper
         self.reason = reason
         self.allowedExtensions = allowedExtensions.map { Set($0.map { $0.lowercased() }) }
         self.includeDirectories = includeDirectories
@@ -36,9 +43,11 @@ public struct CleanupScope: Equatable, Sendable {
 
 public struct CleanupPolicy: Equatable, Sendable {
     public var maxCandidateCount: Int
+    public var maxSizeTraversalEntries: Int
 
-    public init(maxCandidateCount: Int = 2_000) {
+    public init(maxCandidateCount: Int = 2_000, maxSizeTraversalEntries: Int = 20_000) {
         self.maxCandidateCount = maxCandidateCount
+        self.maxSizeTraversalEntries = maxSizeTraversalEntries
     }
 }
 
@@ -68,6 +77,7 @@ public final class DiskCleanupService: @unchecked Sendable {
             CleanupScope(
                 root: home.appendingPathComponent("Library/Caches", isDirectory: true),
                 kind: .userCache,
+                risk: .safe,
                 minimumAge: 0,
                 defaultSelected: true,
                 reason: "User cache item",
@@ -76,6 +86,7 @@ public final class DiskCleanupService: @unchecked Sendable {
             CleanupScope(
                 root: URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true),
                 kind: .temporaryFile,
+                risk: .safe,
                 minimumAge: 0,
                 defaultSelected: true,
                 reason: "Temporary item",
@@ -84,6 +95,7 @@ public final class DiskCleanupService: @unchecked Sendable {
             CleanupScope(
                 root: home.appendingPathComponent("Library/Logs", isDirectory: true),
                 kind: .userLog,
+                risk: .caution,
                 minimumAge: 0,
                 defaultSelected: false,
                 reason: "User log item"
@@ -91,6 +103,7 @@ public final class DiskCleanupService: @unchecked Sendable {
             CleanupScope(
                 root: home.appendingPathComponent("Downloads", isDirectory: true),
                 kind: .downloadedInstaller,
+                risk: .manualReview,
                 minimumAge: 0,
                 defaultSelected: false,
                 reason: "Downloaded installer or archive",
@@ -99,19 +112,7 @@ public final class DiskCleanupService: @unchecked Sendable {
             )
         ]
 
-        scopes.append(contentsOf: nestedContainerScopes(
-            fileManager: fileManager,
-            parent: home.appendingPathComponent("Library/Containers", isDirectory: true),
-            relativeCachePath: "Data/Library/Caches",
-            kind: .appContainerCache
-        ))
-
-        scopes.append(contentsOf: nestedContainerScopes(
-            fileManager: fileManager,
-            parent: home.appendingPathComponent("Library/Group Containers", isDirectory: true),
-            relativeCachePath: "Library/Caches",
-            kind: .appContainerCache
-        ))
+        scopes.append(contentsOf: systemCleanupScopes())
 
         scopes.append(contentsOf: [
             developerScope(home, "Library/Developer/Xcode/DerivedData", defaultSelectionMinimumAge: 7.days),
@@ -135,6 +136,29 @@ public final class DiskCleanupService: @unchecked Sendable {
         return scopes
     }
 
+    public static func systemCleanupScopes() -> [CleanupScope] {
+        [
+            CleanupScope(
+                root: URL(fileURLWithPath: "/Library/Caches", isDirectory: true),
+                kind: .systemCache,
+                risk: .requiresHelper,
+                minimumAge: 0,
+                defaultSelected: false,
+                reason: "System cache item",
+                requiresPrivilegedHelper: true
+            ),
+            CleanupScope(
+                root: URL(fileURLWithPath: "/Library/Logs", isDirectory: true),
+                kind: .systemLog,
+                risk: .requiresHelper,
+                minimumAge: 0,
+                defaultSelected: false,
+                reason: "System log item",
+                requiresPrivilegedHelper: true
+            )
+        ]
+    }
+
     public func scan() throws -> CleanupSnapshot {
         var candidates: [CleanupCandidate] = []
         var skippedPaths: [String] = []
@@ -147,18 +171,7 @@ public final class DiskCleanupService: @unchecked Sendable {
             }
 
             do {
-                let urls = try fileManager.contentsOfDirectory(
-                    at: root,
-                    includingPropertiesForKeys: [
-                        .isDirectoryKey,
-                        .isRegularFileKey,
-                        .isSymbolicLinkKey,
-                        .contentModificationDateKey,
-                        .fileAllocatedSizeKey,
-                        .totalFileAllocatedSizeKey
-                    ],
-                    options: [.skipsHiddenFiles]
-                )
+                let urls = try immediateChildren(of: root)
 
                 for url in urls where candidates.count < policy.maxCandidateCount {
                     guard let candidate = candidate(for: url, in: scope, scanDate: scanDate) else {
@@ -186,12 +199,41 @@ public final class DiskCleanupService: @unchecked Sendable {
         )
     }
 
+    private func immediateChildren(of root: URL) throws -> [URL] {
+        guard let directory = opendir(root.path) else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+        defer { closedir(directory) }
+
+        var urls: [URL] = []
+        while let entry = readdir(directory) {
+            let name = withUnsafePointer(to: &entry.pointee.d_name) { pointer in
+                pointer.withMemoryRebound(to: CChar.self, capacity: Int(entry.pointee.d_namlen)) {
+                    String(cString: $0)
+                }
+            }
+
+            guard name != ".", name != "..", !name.hasPrefix(".") else {
+                continue
+            }
+
+            urls.append(root.appendingPathComponent(name))
+        }
+
+        return urls
+    }
+
     public func moveToTrash(_ candidates: [CleanupCandidate]) -> CleanupExecutionSummary {
         var trashed: [CleanupCandidate] = []
         var failures: [CleanupFailure] = []
 
         for candidate in candidates {
             let url = URL(fileURLWithPath: candidate.path).standardizedFileURL
+            guard !candidate.requiresPrivilegedHelper else {
+                failures.append(CleanupFailure(path: candidate.path, message: "Privileged helper is required for this system cleanup candidate."))
+                continue
+            }
+
             guard isAllowedCleanupPath(url) else {
                 failures.append(CleanupFailure(path: candidate.path, message: "Path is outside configured cleanup scopes."))
                 continue
@@ -260,13 +302,64 @@ public final class DiskCleanupService: @unchecked Sendable {
 
         return CleanupCandidate(
             kind: scope.kind,
+            risk: scope.risk,
             path: standardized.path,
             displayName: standardized.lastPathComponent,
             byteCount: byteCount,
             modifiedAt: modifiedAt,
             defaultSelected: defaultSelected,
+            requiresPrivilegedHelper: scope.requiresPrivilegedHelper,
+            groupIdentifier: groupIdentifier(for: standardized, in: scope),
+            groupTitle: groupTitle(for: standardized, in: scope),
             reason: scope.reason
         )
+    }
+
+    private func groupIdentifier(for url: URL, in scope: CleanupScope) -> String {
+        let path = url.path
+        if path.contains("/.npm/") {
+            return "npm"
+        }
+        if path.contains("/Homebrew/") {
+            return "homebrew"
+        }
+        if path.contains("/Xcode/") || path.contains("/CoreSimulator/") {
+            return "xcode"
+        }
+        if path.contains("/.gradle/") {
+            return "gradle"
+        }
+        if path.contains("/.cargo/") {
+            return "cargo"
+        }
+        if path.contains("/.swiftpm/") {
+            return "swiftpm"
+        }
+        if path.contains("/pip") {
+            return "pip"
+        }
+        return scope.kind.rawValue
+    }
+
+    private func groupTitle(for url: URL, in scope: CleanupScope) -> String {
+        switch groupIdentifier(for: url, in: scope) {
+        case "npm":
+            return "npm cache"
+        case "homebrew":
+            return "Homebrew cache"
+        case "xcode":
+            return "Xcode and simulator cache"
+        case "gradle":
+            return "Gradle cache"
+        case "cargo":
+            return "Cargo cache"
+        case "swiftpm":
+            return "SwiftPM cache"
+        case "pip":
+            return "pip cache"
+        default:
+            return scope.kind.title
+        }
     }
 
     private func isDefaultSelected(by scope: CleanupScope, modifiedAt: Date?, scanDate: Date) -> Bool {
@@ -286,35 +379,51 @@ public final class DiskCleanupService: @unchecked Sendable {
     }
 
     private func allocatedSize(of url: URL) -> Int64 {
-        guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]) else {
+        var visitedEntries = 0
+        return allocatedSize(path: url.path, visitedEntries: &visitedEntries)
+    }
+
+    private func allocatedSize(path: String, visitedEntries: inout Int) -> Int64 {
+        guard visitedEntries < policy.maxSizeTraversalEntries else {
             return 0
         }
 
-        if values.isSymbolicLink == true || values.isDirectory != true {
-            return Int64(resourceInt(url, keys: [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey]) ?? 0)
-        }
-
-        var total: Int64 = 0
-        guard let enumerator = fileManager.enumerator(
-            at: url,
-            includingPropertiesForKeys: [
-                .isDirectoryKey,
-                .isSymbolicLinkKey,
-                .fileAllocatedSizeKey,
-                .totalFileAllocatedSizeKey
-            ],
-            options: [.skipsHiddenFiles],
-            errorHandler: nil
-        ) else {
+        var status = stat()
+        guard lstat(path, &status) == 0 else {
             return 0
         }
 
-        for case let item as URL in enumerator {
-            let isSymbolicLink = (try? item.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink == true
-            if isSymbolicLink {
-                enumerator.skipDescendants()
+        visitedEntries += 1
+        let mode = status.st_mode & S_IFMT
+        guard mode != S_IFLNK else {
+            return 0
+        }
+
+        var total = Int64(status.st_blocks) * 512
+        guard mode == S_IFDIR else {
+            return total
+        }
+
+        guard let directory = opendir(path) else {
+            return total
+        }
+        defer { closedir(directory) }
+
+        while let entry = readdir(directory), visitedEntries < policy.maxSizeTraversalEntries {
+            let name = withUnsafePointer(to: &entry.pointee.d_name) { pointer in
+                pointer.withMemoryRebound(to: CChar.self, capacity: Int(entry.pointee.d_namlen)) {
+                    String(cString: $0)
+                }
             }
-            total += Int64(resourceInt(item, keys: [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey]) ?? 0)
+
+            guard name != ".", name != "..", !name.hasPrefix(".") else {
+                continue
+            }
+
+            total += allocatedSize(
+                path: URL(fileURLWithPath: path, isDirectory: true).appendingPathComponent(name).path,
+                visitedEntries: &visitedEntries
+            )
         }
 
         return total
@@ -324,32 +433,11 @@ public final class DiskCleanupService: @unchecked Sendable {
         try? url.resourceValues(forKeys: [key]).contentModificationDate
     }
 
-    private func resourceInt(_ url: URL, keys: [URLResourceKey]) -> Int? {
-        guard let values = try? url.resourceValues(forKeys: Set(keys)) else {
-            return nil
-        }
-
-        for key in keys {
-            switch key {
-            case .totalFileAllocatedSizeKey:
-                if let value = values.totalFileAllocatedSize {
-                    return value
-                }
-            case .fileAllocatedSizeKey:
-                if let value = values.fileAllocatedSize {
-                    return value
-                }
-            default:
-                continue
-            }
-        }
-
-        return nil
-    }
-
     private func directoryExists(at url: URL) -> Bool {
         var isDirectory: ObjCBool = false
-        return fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) && isDirectory.boolValue
+        return fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
+            && isDirectory.boolValue
+            && fileManager.isReadableFile(atPath: url.path)
     }
 
     private func isAllowedCleanupPath(_ url: URL) -> Bool {
@@ -378,6 +466,7 @@ public final class DiskCleanupService: @unchecked Sendable {
         CleanupScope(
             root: home.appendingPathComponent(relativePath, isDirectory: true),
             kind: .developerCache,
+            risk: .manualReview,
             minimumAge: 0,
             defaultSelected: false,
             reason: "Developer cache item",
@@ -389,45 +478,13 @@ public final class DiskCleanupService: @unchecked Sendable {
         CleanupScope(
             root: home.appendingPathComponent(relativePath, isDirectory: true),
             kind: .packageManagerCache,
+            risk: .manualReview,
             minimumAge: 0,
             defaultSelected: false,
             reason: "Package manager cache item"
         )
     }
 
-    private static func nestedContainerScopes(
-        fileManager: FileManager,
-        parent: URL,
-        relativeCachePath: String,
-        kind: CleanupCandidateKind
-    ) -> [CleanupScope] {
-        guard
-            let containers = try? fileManager.contentsOfDirectory(
-                at: parent,
-                includingPropertiesForKeys: [.isDirectoryKey],
-                options: [.skipsHiddenFiles]
-            )
-        else {
-            return []
-        }
-
-        return containers.compactMap { container -> CleanupScope? in
-            guard
-                ((try? container.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true)
-            else {
-                return nil
-            }
-
-            return CleanupScope(
-                root: container.appendingPathComponent(relativeCachePath, isDirectory: true),
-                kind: kind,
-                minimumAge: 0,
-                defaultSelected: true,
-                reason: "Container cache item",
-                defaultSelectionMinimumAge: 7.days
-            )
-        }
-    }
 }
 
 private extension Int {

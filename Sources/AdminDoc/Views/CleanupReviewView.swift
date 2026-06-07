@@ -18,11 +18,45 @@ struct CleanupReviewView: View {
     }
 
     private var selectedCandidates: [CleanupCandidate] {
-        candidates.filter { selectedIDs.contains($0.id) }
+        candidates.filter { selectedIDs.contains($0.id) && !$0.requiresPrivilegedHelper }
     }
 
     private var selectedBytes: Int64 {
         selectedCandidates.reduce(0) { $0 + $1.byteCount }
+    }
+
+    private var candidateGroups: [CleanupCandidateGroup] {
+        Dictionary(grouping: candidates, by: \.groupIdentifier)
+            .map { identifier, groupedCandidates in
+                CleanupCandidateGroup(
+                    id: identifier,
+                    title: localizedCleanupGroupTitle(
+                        identifier: identifier,
+                        fallback: groupedCandidates.first?.groupTitle ?? identifier
+                    ),
+                    candidates: groupedCandidates.sorted {
+                        if $0.defaultSelected != $1.defaultSelected {
+                            return $0.defaultSelected && !$1.defaultSelected
+                        }
+                        if $0.byteCount != $1.byteCount {
+                            return $0.byteCount > $1.byteCount
+                        }
+                        return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+                    }
+                )
+            }
+            .sorted {
+                if $0.selectableCount == 0, $1.selectableCount > 0 {
+                    return false
+                }
+                if $0.selectableCount > 0, $1.selectableCount == 0 {
+                    return true
+                }
+                if $0.byteCount != $1.byteCount {
+                    return $0.byteCount > $1.byteCount
+                }
+                return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+            }
     }
 
     var body: some View {
@@ -51,7 +85,7 @@ struct CleanupReviewView: View {
                 } label: {
                     Label(L10n.string("common.moveToTrash"), systemImage: "trash")
                 }
-                .disabled(selectedIDs.isEmpty || isScanning || isCleaning)
+                .disabled(selectedCandidates.isEmpty || isScanning || isCleaning)
             }
 
             if isScanning || isCleaning {
@@ -78,7 +112,7 @@ struct CleanupReviewView: View {
             } else {
                 HStack {
                     Button(L10n.string("cleanup.selectRecommended")) {
-                        selectedIDs = Set(candidates.filter(\.defaultSelected).map(\.id))
+                        selectRecommendedCandidates()
                     }
                     .disabled(isScanning || isCleaning)
 
@@ -94,31 +128,19 @@ struct CleanupReviewView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(candidates.prefix(120)) { candidate in
-                            CleanupCandidateRow(
-                                candidate: candidate,
-                                isSelected: Binding(
-                                    get: { selectedIDs.contains(candidate.id) },
-                                    set: { isSelected in
-                                        if isSelected {
-                                            selectedIDs.insert(candidate.id)
-                                        } else {
-                                            selectedIDs.remove(candidate.id)
-                                        }
-                                    }
-                                )
-                            )
-                            .disabled(isScanning || isCleaning)
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(candidateGroups) { group in
+                        CleanupCandidateGroupSection(
+                            group: group,
+                            selectedIDs: $selectedIDs,
+                            isDisabled: isScanning || isCleaning
+                        )
 
-                            if candidate.id != candidates.prefix(120).last?.id {
-                                Divider()
-                            }
+                        if group.id != candidateGroups.last?.id {
+                            Divider()
                         }
                     }
                 }
-                .frame(maxHeight: 260)
             }
         }
         .padding(16)
@@ -136,11 +158,122 @@ struct CleanupReviewView: View {
             Text(L10n.format("cleanup.confirm.message", selectedCandidates.count, ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file)))
         }
     }
+
+    private func selectRecommendedCandidates() {
+        selectedIDs = Set(candidates.filter { $0.defaultSelected && !$0.requiresPrivilegedHelper }.map(\.id))
+    }
+}
+
+private struct CleanupCandidateGroup: Identifiable {
+    let id: String
+    let title: String
+    let candidates: [CleanupCandidate]
+
+    var byteCount: Int64 {
+        candidates.reduce(0) { $0 + $1.byteCount }
+    }
+
+    var byteCountLabel: String {
+        ByteCountFormatter.string(fromByteCount: byteCount, countStyle: .file)
+    }
+
+    var selectableCount: Int {
+        candidates.filter { !$0.requiresPrivilegedHelper }.count
+    }
+}
+
+private struct CleanupCandidateGroupSection: View {
+    let group: CleanupCandidateGroup
+    @Binding var selectedIDs: Set<UUID>
+    let isDisabled: Bool
+
+    private var selectableIDs: Set<UUID> {
+        Set(group.candidates.filter { !$0.requiresPrivilegedHelper }.map(\.id))
+    }
+
+    private var selectedSelectableCount: Int {
+        selectableIDs.filter { selectedIDs.contains($0) }.count
+    }
+
+    private var allSelectableSelected: Bool {
+        !selectableIDs.isEmpty && selectableIDs.isSubset(of: selectedIDs)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Text(group.title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+
+                Text(L10n.format("cleanup.group.summary", group.candidates.count, group.byteCountLabel))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                if group.selectableCount == 0 {
+                    CleanupRiskBadge(risk: .requiresHelper)
+                } else {
+                    Text(L10n.format("cleanup.group.selected", selectedSelectableCount, group.selectableCount))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 12)
+
+                Button {
+                    selectedIDs = selectedIDs.union(selectableIDs)
+                } label: {
+                    Label(L10n.string("cleanup.group.select"), systemImage: "checkmark.circle")
+                }
+                .controlSize(.small)
+                .disabled(isDisabled || selectableIDs.isEmpty || allSelectableSelected)
+
+                Button {
+                    selectedIDs = selectedIDs.subtracting(Set(group.candidates.map(\.id)))
+                } label: {
+                    Label(L10n.string("cleanup.group.clear"), systemImage: "xmark.circle")
+                }
+                .controlSize(.small)
+                .disabled(isDisabled || selectedSelectableCount == 0)
+            }
+            .padding(.vertical, 8)
+
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(group.candidates) { candidate in
+                    CleanupCandidateRow(
+                        candidate: candidate,
+                        isSelected: Binding(
+                            get: { selectedIDs.contains(candidate.id) && !candidate.requiresPrivilegedHelper },
+                            set: { isSelected in
+                                if candidate.requiresPrivilegedHelper {
+                                    selectedIDs.remove(candidate.id)
+                                } else if isSelected {
+                                    selectedIDs.insert(candidate.id)
+                                } else {
+                                    selectedIDs.remove(candidate.id)
+                                }
+                            }
+                        ),
+                        isDisabled: isDisabled
+                    )
+
+                    if candidate.id != group.candidates.last?.id {
+                        Divider()
+                            .padding(.leading, 28)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
 }
 
 private struct CleanupCandidateRow: View {
     let candidate: CleanupCandidate
     @Binding var isSelected: Bool
+    let isDisabled: Bool
 
     var body: some View {
         Toggle(isOn: $isSelected) {
@@ -154,6 +287,8 @@ private struct CleanupCandidateRow: View {
                         Text(candidate.displayName)
                             .font(.callout.weight(.medium))
                             .lineLimit(1)
+
+                        CleanupRiskBadge(risk: candidate.risk)
 
                         if candidate.defaultSelected {
                             Text(L10n.string("cleanup.recommended"))
@@ -170,7 +305,7 @@ private struct CleanupCandidateRow: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
 
-                    Text(candidate.path)
+                    Text(displayCleanupPath(candidate.path))
                         .font(.caption2.monospaced())
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
@@ -187,5 +322,60 @@ private struct CleanupCandidateRow: View {
             .padding(.vertical, 8)
         }
         .toggleStyle(.checkbox)
+        .disabled(isDisabled || candidate.requiresPrivilegedHelper)
+        .help(candidate.requiresPrivilegedHelper ? L10n.string("cleanup.helper.help") : "")
+    }
+}
+
+private func displayCleanupPath(_ path: String) -> String {
+    let homePath = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+
+    if path == homePath {
+        return "~"
+    }
+
+    if path.hasPrefix(homePath + "/") {
+        return "~" + path.dropFirst(homePath.count)
+    }
+
+    return path
+}
+
+private struct CleanupRiskBadge: View {
+    let risk: CleanupRisk
+
+    var body: some View {
+        Text(risk.localizedTitle)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(background, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+    }
+
+    private var foreground: Color {
+        switch risk {
+        case .safe:
+            return .green
+        case .caution:
+            return .orange
+        case .manualReview:
+            return .blue
+        case .requiresHelper:
+            return .secondary
+        }
+    }
+
+    private var background: Color {
+        switch risk {
+        case .safe:
+            return .green.opacity(0.12)
+        case .caution:
+            return .orange.opacity(0.14)
+        case .manualReview:
+            return .blue.opacity(0.12)
+        case .requiresHelper:
+            return .secondary.opacity(0.12)
+        }
     }
 }
