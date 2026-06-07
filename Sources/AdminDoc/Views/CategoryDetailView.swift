@@ -18,9 +18,13 @@ struct CategoryDetailView: View {
     let networkCacheSummary: NetworkCacheFlushSummary?
     let isClearingDNSCache: Bool
     let networkCacheError: String?
+    let localNetworkScanSnapshot: LocalNetworkScanSnapshot?
+    let isScanningLocalNetwork: Bool
+    let localNetworkScanError: String?
     let scanCleanup: () -> Void
     let moveSelectedCleanupItemsToTrash: () -> Void
     let clearDNSCache: () -> Void
+    let scanLocalNetwork: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,6 +60,14 @@ struct CategoryDetailView: View {
                         isClearing: isClearingDNSCache,
                         error: networkCacheError,
                         clearDNSCache: clearDNSCache
+                    )
+                    .listRowSeparator(.hidden)
+
+                    LocalNetworkScanView(
+                        snapshot: localNetworkScanSnapshot,
+                        isScanning: isScanningLocalNetwork,
+                        error: localNetworkScanError,
+                        scan: scanLocalNetwork
                     )
                     .listRowSeparator(.hidden)
                 }

@@ -10,7 +10,9 @@ final class DiagnosticStore: ObservableObject {
     @Published private(set) var isScanningCleanup = false
     @Published private(set) var isCleaning = false
     @Published private(set) var isClearingDNSCache = false
+    @Published private(set) var isScanningLocalNetwork = false
     @Published private(set) var networkCacheSummary: NetworkCacheFlushSummary?
+    @Published private(set) var localNetworkScanSnapshot: LocalNetworkScanSnapshot?
     @Published private(set) var adminPrivilegeState: AdminPrivilegeState = .notRequested
     @Published var selectedCleanupIDs: Set<UUID> = []
     @Published var exportError: String?
@@ -18,12 +20,14 @@ final class DiagnosticStore: ObservableObject {
     @Published var cleanupNotice: String?
     @Published var cleanupFailures: [CleanupFailure] = []
     @Published var networkCacheError: String?
+    @Published var localNetworkScanError: String?
 
     private let runner: any CommandRunning
     private let suite: DiagnosticSuite
     private let exporter = ReportExporter()
     private let cleanupService: DiskCleanupService
     private let networkCacheService: NetworkCacheService
+    private let localNetworkScanner: LocalNetworkScanner
     private let adminPrivilegeManager: AdminPrivilegeManager
     private var didRequestLaunchPrivileges = false
 
@@ -31,12 +35,14 @@ final class DiagnosticStore: ObservableObject {
         runner: any CommandRunning = ProcessRunner(),
         cleanupService: DiskCleanupService = DiskCleanupService(),
         networkCacheService: NetworkCacheService? = nil,
+        localNetworkScanner: LocalNetworkScanner? = nil,
         adminPrivilegeManager: AdminPrivilegeManager = AdminPrivilegeManager()
     ) {
         self.runner = runner
         self.suite = DiagnosticSuite.default(runner: runner)
         self.cleanupService = cleanupService
         self.networkCacheService = networkCacheService ?? NetworkCacheService(runner: runner)
+        self.localNetworkScanner = localNetworkScanner ?? LocalNetworkScanner(runner: runner)
         self.adminPrivilegeManager = adminPrivilegeManager
     }
 
@@ -193,6 +199,29 @@ final class DiagnosticStore: ObservableObject {
             networkCacheError = summary.message
         }
         isClearingDNSCache = false
+    }
+
+    func scanLocalNetwork() async {
+        guard !isScanningLocalNetwork else {
+            return
+        }
+
+        isScanningLocalNetwork = true
+        localNetworkScanError = nil
+
+        let scanner = localNetworkScanner
+        let result = await Task.detached(priority: .userInitiated) {
+            Result { try scanner.scan() }
+        }.value
+
+        switch result {
+        case .success(let snapshot):
+            localNetworkScanSnapshot = snapshot
+        case .failure(let error):
+            localNetworkScanError = error.localizedDescription
+        }
+
+        isScanningLocalNetwork = false
     }
 
     var totalSummary: (fail: Int, warning: Int, pass: Int, info: Int) {

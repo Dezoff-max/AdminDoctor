@@ -36,6 +36,9 @@ struct ContentView: View {
                 networkCacheSummary: store.networkCacheSummary,
                 isClearingDNSCache: store.isClearingDNSCache,
                 networkCacheError: store.networkCacheError,
+                localNetworkScanSnapshot: store.localNetworkScanSnapshot,
+                isScanningLocalNetwork: store.isScanningLocalNetwork,
+                localNetworkScanError: store.localNetworkScanError,
                 scanCleanup: {
                     Task { await store.scanCleanup() }
                 },
@@ -44,6 +47,9 @@ struct ContentView: View {
                 },
                 clearDNSCache: {
                     Task { await store.clearDNSCache() }
+                },
+                scanLocalNetwork: {
+                    Task { await store.scanLocalNetwork() }
                 }
             )
         }
