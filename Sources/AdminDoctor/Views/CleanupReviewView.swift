@@ -9,10 +9,16 @@ struct CleanupReviewView: View {
     let error: String?
     let notice: String?
     let failures: [CleanupFailure]
+    let privilegedPlan: PrivilegedCleanupPlan?
+    let privilegedNotice: String?
+    let isRunningPrivilegedCleanup: Bool
     let scan: () -> Void
     let clean: () -> Void
+    let planPrivilegedCleanup: () -> Void
+    let quarantinePrivilegedCleanup: () -> Void
 
     @State private var confirmingCleanup = false
+    @State private var confirmingPrivilegedCleanup = false
 
     private var candidates: [CleanupCandidate] {
         snapshot?.candidates ?? []
@@ -28,6 +34,21 @@ struct CleanupReviewView: View {
 
     private var hasHelperRequiredCandidates: Bool {
         candidates.contains { $0.requiresPrivilegedHelper }
+    }
+
+    private var helperRequiredCandidates: [CleanupCandidate] {
+        candidates.filter(\.requiresPrivilegedHelper)
+    }
+
+    private var helperRequiredBytesLabel: String {
+        ByteCountFormatter.string(
+            fromByteCount: helperRequiredCandidates.reduce(0) { $0 + $1.byteCount },
+            countStyle: .file
+        )
+    }
+
+    private var isBusy: Bool {
+        isScanning || isCleaning || isRunningPrivilegedCleanup
     }
 
     private var candidateGroups: [CleanupCandidateGroup] {
@@ -83,17 +104,17 @@ struct CleanupReviewView: View {
                 } label: {
                     Label(L10n.string("cleanup.scan"), systemImage: "magnifyingglass")
                 }
-                .disabled(isScanning || isCleaning)
+                .disabled(isBusy)
 
                 Button(role: .destructive) {
                     confirmingCleanup = true
                 } label: {
                     Label(L10n.string("common.moveToTrash"), systemImage: "trash")
                 }
-                .disabled(selectedCandidates.isEmpty || isScanning || isCleaning)
+                .disabled(selectedCandidates.isEmpty || isBusy)
             }
 
-            if isScanning || isCleaning {
+            if isBusy {
                 ProgressView()
                     .controlSize(.small)
             }
@@ -114,6 +135,13 @@ struct CleanupReviewView: View {
                 CleanupFailuresView(failures: failures)
             }
 
+            if let privilegedNotice {
+                Text(privilegedNotice)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+
             if candidates.isEmpty {
                 Text(snapshot == nil ? L10n.string("cleanup.empty.notRun") : L10n.string("cleanup.empty.found"))
                     .font(.callout)
@@ -123,12 +151,12 @@ struct CleanupReviewView: View {
                     Button(L10n.string("cleanup.selectRecommended")) {
                         selectRecommendedCandidates()
                     }
-                    .disabled(isScanning || isCleaning)
+                    .disabled(isBusy)
 
                     Button(L10n.string("common.clear")) {
                         selectedIDs.removeAll()
                     }
-                    .disabled(selectedIDs.isEmpty || isScanning || isCleaning)
+                    .disabled(selectedIDs.isEmpty || isBusy)
 
                     Spacer()
 
@@ -139,6 +167,16 @@ struct CleanupReviewView: View {
 
                 if hasHelperRequiredCandidates {
                     HelperRequiredNotice()
+                    PrivilegedCleanupControls(
+                        candidateCount: helperRequiredCandidates.count,
+                        byteCountLabel: helperRequiredBytesLabel,
+                        plan: privilegedPlan,
+                        isRunning: isRunningPrivilegedCleanup,
+                        planPrivilegedCleanup: planPrivilegedCleanup,
+                        confirmQuarantine: {
+                            confirmingPrivilegedCleanup = true
+                        }
+                    )
                 }
 
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -146,7 +184,7 @@ struct CleanupReviewView: View {
                         CleanupCandidateGroupSection(
                             group: group,
                             selectedIDs: $selectedIDs,
-                            isDisabled: isScanning || isCleaning
+                            isDisabled: isBusy
                         )
 
                         if group.id != candidateGroups.last?.id {
@@ -170,10 +208,78 @@ struct CleanupReviewView: View {
         } message: {
             Text(L10n.format("cleanup.confirm.message", selectedCandidates.count, ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file)))
         }
+        .confirmationDialog(
+            L10n.string("cleanup.privileged.confirm.title"),
+            isPresented: $confirmingPrivilegedCleanup,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.string("cleanup.privileged.quarantine"), role: .destructive) {
+                quarantinePrivilegedCleanup()
+            }
+            Button(L10n.string("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(L10n.format("cleanup.privileged.confirm.message", privilegedPlan?.eligibleCandidates.count ?? helperRequiredCandidates.count, privilegedPlan?.eligibleBytesLabel ?? helperRequiredBytesLabel))
+        }
     }
 
     private func selectRecommendedCandidates() {
         selectedIDs = Set(candidates.filter { $0.defaultSelected && !$0.requiresPrivilegedHelper }.map(\.id))
+    }
+}
+
+private struct PrivilegedCleanupControls: View {
+    let candidateCount: Int
+    let byteCountLabel: String
+    let plan: PrivilegedCleanupPlan?
+    let isRunning: Bool
+    let planPrivilegedCleanup: () -> Void
+    let confirmQuarantine: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Label(L10n.format("cleanup.privileged.summary", candidateCount, byteCountLabel), systemImage: "lock.open.trianglebadge.exclamationmark")
+                    .font(.callout.weight(.medium))
+
+                Spacer()
+
+                Button {
+                    planPrivilegedCleanup()
+                } label: {
+                    Label(L10n.string("cleanup.privileged.dryRun"), systemImage: "doc.text.magnifyingglass")
+                }
+                .disabled(isRunning || candidateCount == 0)
+
+                Button(role: .destructive) {
+                    confirmQuarantine()
+                } label: {
+                    Label(L10n.string("cleanup.privileged.quarantine"), systemImage: "archivebox")
+                }
+                .disabled(isRunning || (plan?.eligibleCandidates.isEmpty ?? true))
+            }
+
+            if let plan {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.format("cleanup.privileged.planSummary", plan.eligibleCandidates.count, plan.eligibleBytesLabel, plan.rejected.count))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    ForEach(plan.eligibleCandidates.prefix(4)) { candidate in
+                        Text(displayCleanupPath(candidate.path))
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+                    }
+                }
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.background.opacity(0.55), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+        }
+        .padding(10)
+        .background(.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
 

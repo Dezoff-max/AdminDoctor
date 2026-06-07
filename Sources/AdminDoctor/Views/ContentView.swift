@@ -36,6 +36,9 @@ struct ContentView: View {
                 cleanupError: store.cleanupError,
                 cleanupNotice: store.cleanupNotice,
                 cleanupFailures: store.cleanupFailures,
+                privilegedCleanupPlan: store.privilegedCleanupPlan,
+                privilegedCleanupNotice: store.privilegedCleanupNotice,
+                isRunningPrivilegedCleanup: store.isRunningPrivilegedCleanup,
                 networkCacheSummary: store.networkCacheSummary,
                 isClearingDNSCache: store.isClearingDNSCache,
                 networkCacheError: store.networkCacheError,
@@ -54,6 +57,12 @@ struct ContentView: View {
                 moveSelectedCleanupItemsToTrash: {
                     Task { await store.moveSelectedCleanupItemsToTrash() }
                 },
+                planPrivilegedCleanup: {
+                    Task { await store.planPrivilegedCleanup() }
+                },
+                quarantinePrivilegedCleanup: {
+                    Task { await store.quarantinePrivilegedCleanup() }
+                },
                 clearDNSCache: {
                     Task { await store.clearDNSCache() }
                 },
@@ -62,6 +71,9 @@ struct ContentView: View {
                 },
                 clearLocalNetworkScan: {
                     store.clearLocalNetworkScan()
+                },
+                exportLocalNetworkCSV: {
+                    saveLocalNetworkCSV()
                 },
                 ping: { host in
                     Task { await store.ping(host: host) }
@@ -80,6 +92,9 @@ struct ContentView: View {
                 },
                 proxyReachability: {
                     Task { await store.proxyReachability() }
+                },
+                externalIP: {
+                    Task { await store.externalIP() }
                 },
                 refreshPrivilegedHelperStatus: {
                     store.refreshPrivilegedHelperStatus()
@@ -194,6 +209,28 @@ struct ContentView: View {
             reportPreview = nil
         } catch {
             store.exportError = error.localizedDescription
+        }
+    }
+
+    private func saveLocalNetworkCSV() {
+        guard let data = store.localNetworkCSVData() else {
+            store.localNetworkScanError = L10n.string("network.local.noCSVSnapshot")
+            return
+        }
+
+        let panel = NSSavePanel()
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = "AdminDoctor-lan-scan.csv"
+        panel.allowedContentTypes = [UTType(filenameExtension: "csv") ?? .commaSeparatedText]
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+
+        do {
+            try data.write(to: url, options: [.atomic])
+        } catch {
+            store.localNetworkScanError = error.localizedDescription
         }
     }
 

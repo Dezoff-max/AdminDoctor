@@ -7,6 +7,7 @@ public enum NetworkProbeKind: String, Codable, Sendable {
     case routeTable
     case captivePortal
     case proxyReachability
+    case externalIP
 }
 
 public struct ProxyEndpoint: Codable, Equatable, Sendable {
@@ -87,6 +88,21 @@ public enum NetworkToolkitParser {
         }
 
         return succeeded ? "DNS lookup completed without address records." : "DNS lookup failed."
+    }
+
+    public static func parseExternalIPAddress(_ output: String) -> String? {
+        ParserHelpers.trimmedNonEmptyLines(output).first { line in
+            line.range(of: #"^(\d{1,3}\.){3}\d{1,3}$"#, options: .regularExpression) != nil ||
+                line.range(of: #"^[0-9a-fA-F:]{3,}$"#, options: .regularExpression) != nil
+        }
+    }
+
+    public static func externalIPSummary(output: String, succeeded: Bool) -> String {
+        if let address = parseExternalIPAddress(output) {
+            return "External IP appears to be \(address)."
+        }
+
+        return succeeded ? "External IP lookup completed without an address." : "External IP lookup failed."
     }
 
     public static func routeTableSummary(output: String, succeeded: Bool) -> String {
@@ -248,6 +264,26 @@ public final class NetworkToolkitService: @unchecked Sendable {
             ranAt: now(),
             succeeded: result.succeeded,
             summary: NetworkToolkitParser.routeTableSummary(output: output, succeeded: result.succeeded),
+            outputLines: clippedLines(output),
+            source: command.displayName
+        )
+    }
+
+    public func externalIP() throws -> NetworkProbeSummary {
+        let command = Command(
+            "/usr/bin/dig",
+            arguments: ["+short", "myip.opendns.com", "@resolver1.opendns.com"],
+            timeout: 8
+        )
+        let result = try run(command)
+        let output = mergedOutput(result)
+        let address = NetworkToolkitParser.parseExternalIPAddress(output)
+        return NetworkProbeSummary(
+            kind: .externalIP,
+            host: "resolver1.opendns.com",
+            ranAt: now(),
+            succeeded: result.succeeded && address != nil,
+            summary: NetworkToolkitParser.externalIPSummary(output: output, succeeded: result.succeeded),
             outputLines: clippedLines(output),
             source: command.displayName
         )

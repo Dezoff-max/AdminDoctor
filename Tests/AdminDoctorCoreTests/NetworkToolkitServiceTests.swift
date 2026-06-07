@@ -40,6 +40,18 @@ final class NetworkToolkitServiceTests: XCTestCase {
         )
     }
 
+    func testParsesExternalIPAddress() {
+        let output = """
+        203.0.113.42
+        """
+
+        XCTAssertEqual(NetworkToolkitParser.parseExternalIPAddress(output), "203.0.113.42")
+        XCTAssertEqual(
+            NetworkToolkitParser.externalIPSummary(output: output, succeeded: true),
+            "External IP appears to be 203.0.113.42."
+        )
+    }
+
     func testParsesRouteTableSummary() {
         let output = """
         Routing tables

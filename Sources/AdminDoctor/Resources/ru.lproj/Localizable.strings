@@ -36,7 +36,7 @@
 "cleanup.group.swiftpm" = "Кэш SwiftPM";
 "cleanup.group.xcode" = "Кэш Xcode и симуляторов";
 "cleanup.helper.help" = "Этот объект находится в системной области и требует подписанный privileged helper перед очисткой через AdminDoctor.";
-"cleanup.helper.notice" = "Системные объекты очистки сейчас показываются только для проверки. Встроенный helper пока является read-only заготовкой для разработки; привилегированное удаление в этой сборке не установлено.";
+"cleanup.helper.notice" = "Для системных объектов нужен подписанный helper. Доступны dry-run и карантин; объекты перемещаются в карантин AdminDoctor, а не удаляются навсегда.";
 "cleanup.kind.downloadedInstaller" = "Загруженный установщик";
 "cleanup.kind.appContainerCache" = "Кэш контейнера приложения";
 "cleanup.kind.developerCache" = "Кэш разработки";
@@ -51,6 +51,14 @@
 "cleanup.notice.mixed" = "Перемещено в Корзину: %d, ошибок: %d.";
 "cleanup.notice.recreated" = "Некоторые перемещенные объекты были пересозданы macOS или работающей службой и снова видны после повторного сканирования.";
 "cleanup.notice.trashed" = "Перемещено в Корзину: %d, выбрано %@.";
+"cleanup.privileged.confirm.message" = "%d системных объект(ов), %@. Объекты будут перемещены в карантин AdminDoctor, не удалены навсегда.";
+"cleanup.privileged.confirm.title" = "Переместить системные объекты очистки в карантин?";
+"cleanup.privileged.dryRun" = "Dry-run";
+"cleanup.privileged.noCandidates" = "Нет системных кандидатов, которым нужен helper.";
+"cleanup.privileged.planSummary" = "Dry-run: доступно %d объект(ов), %@, отклонено: %d.";
+"cleanup.privileged.quarantine" = "Карантин";
+"cleanup.privileged.quarantineSummary" = "В карантин перемещено: %d, %@. Ошибок: %d. Путь: %@";
+"cleanup.privileged.summary" = "%d системных объект(ов), %@";
 "cleanup.reason.downloadedInstaller" = "Загруженный установщик или архив";
 "cleanup.reason.appContainerCache" = "Объект кэша контейнера приложения";
 "cleanup.reason.developerCache" = "Объект кэша разработки";
@@ -100,7 +108,7 @@
 "history.tooltip" = "%d сбой, %d предупр., %d успешно, %d инфо";
 "helper.status.bundled" = "В bundle";
 "helper.status.codeSignature" = "Подпись";
-"helper.status.description" = "Helper нужен только для будущей системной очистки. Текущая сборка показывает статус установки и не удаляет root-owned файлы.";
+"helper.status.description" = "Подписанный helper выполняет проверенный dry-run и перемещение системных объектов в карантин. Root-owned файлы не удаляются навсегда.";
 "helper.status.installedTool" = "Установлен";
 "helper.status.label" = "Label";
 "helper.status.launchDaemon" = "LaunchDaemon";
@@ -156,6 +164,7 @@
 "network.local.lastScan" = "Скан %@";
 "network.local.localAddress" = "Этот Mac";
 "network.local.noMac" = "Нет MAC";
+"network.local.noCSVSnapshot" = "Сначала запустите LAN-сканирование, затем экспортируйте CSV.";
 "network.local.noOpenPorts" = "Нет";
 "network.local.online" = "В сети";
 "network.local.privateVendor" = "Частный MAC";
@@ -179,9 +188,11 @@
 "network.local.unknownVendor" = "Неизвестно";
 "network.toolkit.captive" = "Portal";
 "network.toolkit.captiveResult" = "Captive Portal";
-"network.toolkit.description" = "Запускает сетевые проверки только по запросу. Captive Portal делает внешний probe к Apple, остальные проверки локальные или к указанному хосту.";
+"network.toolkit.description" = "Запускает сетевые проверки только по запросу. Portal и Внешний IP делают внешний probe, остальные проверки локальные или к указанному хосту.";
 "network.toolkit.dns" = "DNS";
 "network.toolkit.dnsResult" = "DNS lookup";
+"network.toolkit.externalIP" = "Внешний IP";
+"network.toolkit.externalIPResult" = "Внешний IP";
 "network.toolkit.hostPlaceholder" = "Хост или IP";
 "network.toolkit.ping" = "Ping";
 "network.toolkit.pingResult" = "Ping";

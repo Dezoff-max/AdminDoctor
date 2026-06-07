@@ -35,7 +35,8 @@ Safe cleanup utilities must:
 - show item names, paths, and size estimates before action
 - require explicit user confirmation
 - move selected items to Trash instead of permanently deleting them
-- keep system paths and privileged locations out of scope
+- keep system paths and privileged locations out of the main app cleanup path
+- use signed helper dry-run, allow-listed paths, quarantine moves, and audit logging for privileged system cleanup candidates
 
 ## Administrator Authorization
 
@@ -43,11 +44,22 @@ AdminDoctor requests administrator authorization at launch through macOS Authori
 
 This does not make the SwiftUI process run as root. Privileged operations must use explicit, reviewed code paths and must stay reversible or read-only unless a release has a signed, notarized helper and a documented action audit trail.
 
-The bundled `AdminDoctorPrivilegedHelper` includes a launchd plist, `SMAppService` registration flow, and XPC status/read-only helper methods. Production helper approval requires a valid Apple code-signing identity and a correctly signed app/helper pair. The current helper does not delete privileged paths.
+The bundled `AdminDoctorPrivilegedHelper` includes a launchd plist, `SMAppService` registration flow, and XPC status, dry-run, and quarantine methods. Production helper approval requires a valid Apple code-signing identity and a correctly signed app/helper pair.
+
+Privileged cleanup must:
+
+- accept only paths found by the current allow-listed system cleanup scan
+- reject symbolic links and paths outside the allow-list
+- perform dry-run planning before action
+- move eligible items to `/Users/Shared/AdminDoctor/PrivilegedCleanup`
+- write JSONL audit events to `/Library/Logs/AdminDoctor/privileged-helper-audit.jsonl`
+- avoid irreversible deletion commands
 
 ## Network Scanning
 
 LAN scanning is local-only. AdminDoctor may send short ICMP probes to local addresses, read the local ARP table, attempt local Bonjour/mDNS-style name hints, and probe a small set of common ports on discovered local devices. It must not upload discovered devices or query a remote vendor database at runtime.
+
+External IP lookup is intentionally user-triggered because it contacts an external DNS resolver.
 
 ## Sensitive Test Data
 

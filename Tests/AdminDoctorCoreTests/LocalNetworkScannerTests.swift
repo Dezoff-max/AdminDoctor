@@ -124,6 +124,37 @@ final class LocalNetworkScannerTests: XCTestCase {
         )
     }
 
+    func testFormatsPortServicesAndExportsCSV() {
+        let snapshot = LocalNetworkScanSnapshot(
+            scannedAt: Date(timeIntervalSince1970: 100),
+            interfaceName: "en0",
+            localAddress: "192.168.50.25",
+            gateway: "192.168.50.1",
+            scanRangeDescription: "192.168.50.1-254",
+            scannedHostCount: 253,
+            cappedToLocalSlash24: true,
+            devices: [
+                LocalNetworkDevice(
+                    ipAddress: "192.168.50.1",
+                    macAddress: "aa:bb:cc:dd:ee:ff",
+                    hostname: "router.local",
+                    vendorName: "Example Router Co",
+                    interfaceName: "en0",
+                    openPorts: [22, 80],
+                    deviceType: .router,
+                    source: "fixture"
+                )
+            ]
+        )
+
+        let csv = LocalNetworkCSVExporter.csv(snapshot: snapshot)
+
+        XCTAssertEqual(LocalNetworkPortCatalog.displayName(for: 22), "22 SSH")
+        XCTAssertTrue(csv.contains("22 SSH; 80 HTTP"))
+        XCTAssertTrue(csv.contains("router.local"))
+        XCTAssertTrue(csv.contains("default gateway"))
+    }
+
     func testScannerUsesDefaultInterfaceAndARPTable() throws {
         let runner = LocalNetworkScannerMockRunner(results: [
             "route -n get default": CommandResult(stdout: """

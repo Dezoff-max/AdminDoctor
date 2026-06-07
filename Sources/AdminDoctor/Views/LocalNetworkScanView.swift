@@ -7,6 +7,7 @@ struct LocalNetworkScanView: View {
     let error: String?
     let scan: () -> Void
     let clear: () -> Void
+    let exportCSV: () -> Void
 
     @State private var rangeText = ""
     @State private var filterText = ""
@@ -79,6 +80,16 @@ struct LocalNetworkScanView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.large)
                 .disabled(isScanning || !canClear)
+
+                Button {
+                    exportCSV()
+                } label: {
+                    Label("CSV", systemImage: "tablecells")
+                        .labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .disabled(isScanning || snapshot == nil)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.string("network.local.range"))
@@ -480,7 +491,7 @@ private func portsText(for device: LocalNetworkDevice) -> String {
     guard !device.openPorts.isEmpty else {
         return L10n.string("network.local.noOpenPorts")
     }
-    return device.openPorts.map(String.init).joined(separator: ", ")
+    return device.openPorts.map(LocalNetworkPortCatalog.displayName(for:)).joined(separator: ", ")
 }
 
 private func deviceTypeTitle(_ type: LocalNetworkDeviceType) -> String {

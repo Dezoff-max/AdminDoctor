@@ -11,6 +11,7 @@ struct NetworkToolkitView: View {
     let routeTable: () -> Void
     let captivePortal: () -> Void
     let proxyReachability: () -> Void
+    let externalIP: () -> Void
 
     @State private var host = "1.1.1.1"
 
@@ -28,58 +29,68 @@ struct NetworkToolkitView: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                TextField(L10n.string("network.toolkit.hostPlaceholder"), text: $host)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.callout.monospaced())
-                    .frame(width: 220)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    TextField(L10n.string("network.toolkit.hostPlaceholder"), text: $host)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.callout.monospaced())
+                        .frame(minWidth: 180, maxWidth: 260)
 
-                Button {
-                    ping(host)
-                } label: {
-                    Label(L10n.string("network.toolkit.ping"), systemImage: "dot.radiowaves.left.and.right")
+                    Button {
+                        ping(host)
+                    } label: {
+                        Label(L10n.string("network.toolkit.ping"), systemImage: "dot.radiowaves.left.and.right")
+                    }
+                    .disabled(isRunning)
+
+                    Button {
+                        dnsLookup(host)
+                    } label: {
+                        Label(L10n.string("network.toolkit.dns"), systemImage: "magnifyingglass")
+                    }
+                    .disabled(isRunning)
+
+                    Button {
+                        traceroute(host)
+                    } label: {
+                        Label(L10n.string("network.toolkit.trace"), systemImage: "point.topleft.down.curvedto.point.bottomright.up")
+                    }
+                    .disabled(isRunning)
+
+                    Spacer(minLength: 0)
                 }
-                .disabled(isRunning)
 
-                Button {
-                    dnsLookup(host)
-                } label: {
-                    Label(L10n.string("network.toolkit.dns"), systemImage: "magnifyingglass")
+                HStack(spacing: 8) {
+                    Button {
+                        routeTable()
+                    } label: {
+                        Label(L10n.string("network.toolkit.routes"), systemImage: "point.3.connected.trianglepath.dotted")
+                    }
+                    .disabled(isRunning)
+
+                    Button {
+                        captivePortal()
+                    } label: {
+                        Label(L10n.string("network.toolkit.captive"), systemImage: "wifi.exclamationmark")
+                    }
+                    .disabled(isRunning)
+
+                    Button {
+                        proxyReachability()
+                    } label: {
+                        Label(L10n.string("network.toolkit.proxy"), systemImage: "arrow.triangle.branch")
+                    }
+                    .disabled(isRunning)
+
+                    Button {
+                        externalIP()
+                    } label: {
+                        Label(L10n.string("network.toolkit.externalIP"), systemImage: "globe.badge.chevron.backward")
+                    }
+                    .disabled(isRunning)
+
+                    Spacer(minLength: 0)
                 }
-                .disabled(isRunning)
-
-                Button {
-                    traceroute(host)
-                } label: {
-                    Label(L10n.string("network.toolkit.trace"), systemImage: "point.topleft.down.curvedto.point.bottomright.up")
-                }
-                .disabled(isRunning)
-
-                Divider()
-                    .frame(height: 20)
-
-                Button {
-                    routeTable()
-                } label: {
-                    Label(L10n.string("network.toolkit.routes"), systemImage: "point.3.connected.trianglepath.dotted")
-                }
-                .disabled(isRunning)
-
-                Button {
-                    captivePortal()
-                } label: {
-                    Label(L10n.string("network.toolkit.captive"), systemImage: "wifi.exclamationmark")
-                }
-                .disabled(isRunning)
-
-                Button {
-                    proxyReachability()
-                } label: {
-                    Label(L10n.string("network.toolkit.proxy"), systemImage: "arrow.triangle.branch")
-                }
-                .disabled(isRunning)
-
-                Spacer()
             }
 
             Text(L10n.string("network.toolkit.description"))
@@ -162,6 +173,8 @@ private struct NetworkProbeResultView: View {
             return L10n.string("network.toolkit.captiveResult")
         case .proxyReachability:
             return L10n.string("network.toolkit.proxyResult")
+        case .externalIP:
+            return L10n.string("network.toolkit.externalIPResult")
         }
     }
 }

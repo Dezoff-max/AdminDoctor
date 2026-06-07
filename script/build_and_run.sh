@@ -101,10 +101,11 @@ PLIST
 /usr/bin/xattr -dr "com.apple.fileprovider.fpfs#P" "$APP_BUNDLE" 2>/dev/null || true
 
 if [[ -n "${CODE_SIGN_IDENTITY:-}" ]]; then
+  CODESIGN_TIMESTAMP_ARG="${CODE_SIGN_TIMESTAMP_ARG:---timestamp=none}"
   if [[ -f "$HELPER_BINARY" ]]; then
-    /usr/bin/codesign --force --options runtime --timestamp=none --sign "$CODE_SIGN_IDENTITY" "$HELPER_BINARY"
+    /usr/bin/codesign --force --options runtime "$CODESIGN_TIMESTAMP_ARG" --sign "$CODE_SIGN_IDENTITY" "$HELPER_BINARY"
   fi
-  /usr/bin/codesign --force --options runtime --timestamp=none --sign "$CODE_SIGN_IDENTITY" "$APP_BUNDLE"
+  /usr/bin/codesign --force --options runtime "$CODESIGN_TIMESTAMP_ARG" --sign "$CODE_SIGN_IDENTITY" "$APP_BUNDLE"
 fi
 
 open_app() {

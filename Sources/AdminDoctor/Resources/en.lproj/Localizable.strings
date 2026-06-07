@@ -36,7 +36,7 @@
 "cleanup.group.swiftpm" = "SwiftPM cache";
 "cleanup.group.xcode" = "Xcode and simulator cache";
 "cleanup.helper.help" = "This item is in a system location and requires a signed privileged helper before AdminDoctor can clean it.";
-"cleanup.helper.notice" = "System cleanup items are shown for review only. The bundled helper is currently a read-only development scaffold; privileged deletion is not installed in this build.";
+"cleanup.helper.notice" = "System cleanup items require the signed helper. Dry-run and quarantine are available; items are moved to AdminDoctor quarantine, not permanently deleted.";
 "cleanup.kind.downloadedInstaller" = "Downloaded installer";
 "cleanup.kind.appContainerCache" = "App container cache";
 "cleanup.kind.developerCache" = "Developer cache";
@@ -51,6 +51,14 @@
 "cleanup.notice.mixed" = "%d item(s) moved to Trash, %d failed.";
 "cleanup.notice.recreated" = "Some moved items were recreated by macOS or a running service and are still visible after the rescan.";
 "cleanup.notice.trashed" = "%d item(s) moved to Trash, %@ selected.";
+"cleanup.privileged.confirm.message" = "%d helper-required item(s), %@. Items will be moved to AdminDoctor quarantine, not permanently deleted.";
+"cleanup.privileged.confirm.title" = "Quarantine helper-required system cleanup items?";
+"cleanup.privileged.dryRun" = "Dry run";
+"cleanup.privileged.noCandidates" = "No helper-required cleanup candidates are available.";
+"cleanup.privileged.planSummary" = "Dry-run: %d eligible item(s), %@, %d rejected.";
+"cleanup.privileged.quarantine" = "Quarantine";
+"cleanup.privileged.quarantineSummary" = "Quarantined %d item(s), %@. Failures: %d. Location: %@";
+"cleanup.privileged.summary" = "%d helper-required item(s), %@";
 "cleanup.reason.downloadedInstaller" = "Downloaded installer or archive";
 "cleanup.reason.appContainerCache" = "App container cache item";
 "cleanup.reason.developerCache" = "Developer cache item";
@@ -100,7 +108,7 @@
 "history.tooltip" = "%d fail, %d warning, %d pass, %d info";
 "helper.status.bundled" = "Bundled";
 "helper.status.codeSignature" = "Signature";
-"helper.status.description" = "The helper is required only for future system cleanup. This build shows install status and does not delete root-owned files.";
+"helper.status.description" = "The signed helper handles reviewed system cleanup dry-runs and quarantine moves. It does not permanently delete root-owned files.";
 "helper.status.installedTool" = "Installed";
 "helper.status.label" = "Label";
 "helper.status.launchDaemon" = "LaunchDaemon";
@@ -156,6 +164,7 @@
 "network.local.lastScan" = "Scanned %@";
 "network.local.localAddress" = "This Mac";
 "network.local.noMac" = "No MAC";
+"network.local.noCSVSnapshot" = "Run a LAN scan before exporting CSV.";
 "network.local.noOpenPorts" = "None";
 "network.local.online" = "Online";
 "network.local.privateVendor" = "Private MAC";
@@ -179,9 +188,11 @@
 "network.local.unknownVendor" = "Unknown";
 "network.toolkit.captive" = "Portal";
 "network.toolkit.captiveResult" = "Captive Portal";
-"network.toolkit.description" = "Runs network checks only when requested. Captive Portal contacts Apple's probe endpoint; other checks are local or target the entered host.";
+"network.toolkit.description" = "Runs network checks only when requested. Captive Portal and External IP make an external probe; other checks are local or target the entered host.";
 "network.toolkit.dns" = "DNS";
 "network.toolkit.dnsResult" = "DNS lookup";
+"network.toolkit.externalIP" = "External IP";
+"network.toolkit.externalIPResult" = "External IP";
 "network.toolkit.hostPlaceholder" = "Host or IP";
 "network.toolkit.ping" = "Ping";
 "network.toolkit.pingResult" = "Ping";

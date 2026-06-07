@@ -107,11 +107,24 @@ AdminDoctor is a privacy-first macOS diagnostics app for system administrators, 
 - [x] Add horizontal scrolling to the LAN results table.
 - [x] Add export preview sheets for Markdown, JSON, HTML, and PDF before saving.
 
+## v0.1.10 - Signed Release Prep And Admin Exports
+
+- [x] Add GitHub Actions workflow for signed and notarized DMG releases.
+- [x] Add local notarization script using `xcrun notarytool` and stapling validation.
+- [x] Add privileged helper dry-run and quarantine actions for allow-listed system cleanup candidates.
+- [x] Add JSONL audit events for privileged helper cleanup actions.
+- [x] Add External IP as an explicit user-triggered network probe.
+- [x] Add LAN CSV export with readable port service names.
+- [x] Improve HTML report styling and PDF rendering.
+- [x] Add multiple GitHub README screenshots.
+
 ## v0.2.0 - Admin Toolkit Foundation
 
 - [ ] Add a tools sidebar model separate from diagnostic categories.
-- [ ] Add action audit trail for any non-read-only utility operation.
+- [x] Add action audit trail for helper quarantine cleanup.
+- [ ] Add action audit trail for every non-read-only utility operation.
 - [ ] Add per-tool risk labels: read-only, reversible, privileged-later.
+- [x] Add dry-run summaries for helper cleanup.
 - [ ] Add dry-run summaries for every future action.
 - [ ] Add local-only preferences for defaults and retention windows.
 - [ ] Ship signed and notarized privileged-helper releases for operations that truly need root.

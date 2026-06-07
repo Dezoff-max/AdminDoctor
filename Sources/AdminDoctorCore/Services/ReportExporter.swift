@@ -182,33 +182,75 @@ public struct ReportExporter: Sendable {
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>AdminDoctor Support Report</title>
           <style>
-            :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-            body { margin: 32px; line-height: 1.45; background: Canvas; color: CanvasText; }
-            header { border-bottom: 1px solid color-mix(in srgb, CanvasText 18%, transparent); margin-bottom: 24px; padding-bottom: 16px; }
-            h1 { font-size: 28px; margin: 0 0 12px; }
-            h2 { border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); margin-top: 28px; padding-top: 20px; }
+            :root {
+              color-scheme: light dark;
+              --border: rgba(120, 120, 128, .24);
+              --muted: rgba(120, 120, 128, .92);
+              --panel: rgba(120, 120, 128, .10);
+              --fail: #ff3b30;
+              --warning: #ff9f0a;
+              --pass: #34c759;
+              --info: #0a84ff;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            }
+            body { margin: 0; line-height: 1.45; background: Canvas; color: CanvasText; }
+            main { max-width: 1100px; margin: 0 auto; padding: 34px; }
+            header { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: start; border-bottom: 1px solid var(--border); margin-bottom: 22px; padding-bottom: 18px; }
+            h1 { font-size: 30px; letter-spacing: 0; margin: 0 0 8px; }
+            h2 { border-top: 1px solid var(--border); margin-top: 30px; padding-top: 20px; }
+            .badge { display: inline-block; border: 1px solid var(--border); border-radius: 7px; padding: 5px 8px; font-size: 12px; color: var(--muted); }
+            .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 16px 0 8px; }
+            .summary-card { border: 1px solid var(--border); background: var(--panel); border-radius: 8px; padding: 10px; }
+            .summary-card strong { display: block; margin-bottom: 8px; }
+            .counts { display: flex; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
             table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
-            th, td { border-bottom: 1px solid color-mix(in srgb, CanvasText 12%, transparent); padding: 7px 8px; text-align: left; vertical-align: top; }
-            th { color: color-mix(in srgb, CanvasText 72%, transparent); font-weight: 600; }
-            .finding { border-left: 4px solid color-mix(in srgb, CanvasText 20%, transparent); padding: 10px 0 10px 14px; margin: 12px 0; }
-            .finding h3 { margin: 0 0 6px; font-size: 17px; }
-            .finding h3 span { font-size: 12px; letter-spacing: .04em; color: color-mix(in srgb, CanvasText 64%, transparent); }
+            th, td { border-bottom: 1px solid var(--border); padding: 7px 8px; text-align: left; vertical-align: top; }
+            th { color: var(--muted); font-weight: 600; }
+            .finding { border: 1px solid var(--border); border-left-width: 5px; border-radius: 8px; padding: 12px 14px; margin: 12px 0; background: rgba(120, 120, 128, .06); break-inside: avoid; }
+            .finding h3 { margin: 0 0 7px; font-size: 17px; }
+            .finding h3 span { display: inline-block; min-width: 58px; border-radius: 999px; padding: 2px 7px; margin-right: 7px; text-align: center; font-size: 11px; color: white; }
             .fail { border-left-color: #ff3b30; }
-            .warning { border-left-color: #ffcc00; }
+            .warning { border-left-color: #ff9f0a; }
             .pass { border-left-color: #34c759; }
             .info { border-left-color: #0a84ff; }
-            .source, .meta { color: color-mix(in srgb, CanvasText 62%, transparent); font-size: 13px; }
+            .fail h3 span { background: var(--fail); }
+            .warning h3 span { background: var(--warning); }
+            .pass h3 span { background: var(--pass); }
+            .info h3 span { background: var(--info); }
+            .source, .meta { color: var(--muted); font-size: 13px; }
+            @media print {
+              main { padding: 22px; }
+              .finding { break-inside: avoid; }
+            }
           </style>
         </head>
         <body>
+        <main>
           <header>
-            <h1>AdminDoctor Support Report</h1>
-            <p class="meta">Generated: \(escapeHTML(generated))</p>
-            <p class="meta">Redaction: enabled. Values redacted by default: \(escapeHTML(report.redactionSummary.joined(separator: ", "))).</p>
-            <p class="meta">Schema version: \(report.schemaVersion)</p>
+            <div>
+              <h1>AdminDoctor Support Report</h1>
+              <p class="meta">Generated: \(escapeHTML(generated))</p>
+              <p class="meta">Redaction: enabled. Values redacted by default: \(escapeHTML(report.redactionSummary.joined(separator: ", "))).</p>
+            </div>
+            <div class="badge">Schema \(report.schemaVersion)</div>
           </header>
           <section>
             <h2>Summary</h2>
+            <div class="summary-grid">
+              \(report.categorySummaries.map { summary in
+                  """
+                  <div class="summary-card">
+                    <strong>\(escapeHTML(summary.category.title))</strong>
+                    <div class="counts">
+                      <span>\(summary.failCount) fail</span>
+                      <span>\(summary.warningCount) warn</span>
+                      <span>\(summary.passCount) pass</span>
+                      <span>\(summary.infoCount) info</span>
+                    </div>
+                  </div>
+                  """
+              }.joined(separator: "\n"))
+            </div>
             <table>
               <thead><tr><th>Category</th><th>Fail</th><th>Warning</th><th>Pass</th><th>Info</th></tr></thead>
               <tbody>
@@ -217,6 +259,7 @@ public struct ReportExporter: Sendable {
             </table>
           </section>
         \(sections.joined(separator: "\n"))
+        </main>
         </body>
         </html>
         """

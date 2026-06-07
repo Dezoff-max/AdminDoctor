@@ -16,6 +16,9 @@ struct CategoryDetailView: View {
     let cleanupError: String?
     let cleanupNotice: String?
     let cleanupFailures: [CleanupFailure]
+    let privilegedCleanupPlan: PrivilegedCleanupPlan?
+    let privilegedCleanupNotice: String?
+    let isRunningPrivilegedCleanup: Bool
     let networkCacheSummary: NetworkCacheFlushSummary?
     let isClearingDNSCache: Bool
     let networkCacheError: String?
@@ -30,15 +33,19 @@ struct CategoryDetailView: View {
     let privilegedHelperMessage: String?
     let scanCleanup: () -> Void
     let moveSelectedCleanupItemsToTrash: () -> Void
+    let planPrivilegedCleanup: () -> Void
+    let quarantinePrivilegedCleanup: () -> Void
     let clearDNSCache: () -> Void
     let scanLocalNetwork: () -> Void
     let clearLocalNetworkScan: () -> Void
+    let exportLocalNetworkCSV: () -> Void
     let ping: (String) -> Void
     let traceroute: (String) -> Void
     let dnsLookup: (String) -> Void
     let routeTable: () -> Void
     let captivePortal: () -> Void
     let proxyReachability: () -> Void
+    let externalIP: () -> Void
     let refreshPrivilegedHelperStatus: () -> Void
     let registerPrivilegedHelper: () -> Void
     let unregisterPrivilegedHelper: () -> Void
@@ -78,8 +85,13 @@ struct CategoryDetailView: View {
                         error: cleanupError,
                         notice: cleanupNotice,
                         failures: cleanupFailures,
+                        privilegedPlan: privilegedCleanupPlan,
+                        privilegedNotice: privilegedCleanupNotice,
+                        isRunningPrivilegedCleanup: isRunningPrivilegedCleanup,
                         scan: scanCleanup,
-                        clean: moveSelectedCleanupItemsToTrash
+                        clean: moveSelectedCleanupItemsToTrash,
+                        planPrivilegedCleanup: planPrivilegedCleanup,
+                        quarantinePrivilegedCleanup: quarantinePrivilegedCleanup
                     )
                     .listRowSeparator(.hidden)
                 }
@@ -102,7 +114,8 @@ struct CategoryDetailView: View {
                         dnsLookup: dnsLookup,
                         routeTable: routeTable,
                         captivePortal: captivePortal,
-                        proxyReachability: proxyReachability
+                        proxyReachability: proxyReachability,
+                        externalIP: externalIP
                     )
                     .listRowSeparator(.hidden)
 
@@ -111,7 +124,8 @@ struct CategoryDetailView: View {
                         isScanning: isScanningLocalNetwork,
                         error: localNetworkScanError,
                         scan: scanLocalNetwork,
-                        clear: clearLocalNetworkScan
+                        clear: clearLocalNetworkScan,
+                        exportCSV: exportLocalNetworkCSV
                     )
                     .listRowSeparator(.hidden)
                 }

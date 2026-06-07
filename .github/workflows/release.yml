@@ -1,0 +1,78 @@
+name: Signed Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  signed-release:
+    name: Build, Sign, Notarize, Release
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6.0.3
+
+      - name: Import Developer ID certificate
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${MACOS_CERTIFICATE_P12_BASE64:-}" || -z "${MACOS_CERTIFICATE_PASSWORD:-}" ]]; then
+            echo "Missing signing certificate secrets." >&2
+            exit 2
+          fi
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/admindoctor-signing.keychain-db"
+          CERT_PATH="$RUNNER_TEMP/admindoctor-certificate.p12"
+          echo "$MACOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$MACOS_CERTIFICATE_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$MACOS_CERTIFICATE_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed s/\"//g)
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CERTIFICATE_PASSWORD" "$KEYCHAIN_PATH"
+
+      - name: Build signed DMG
+        env:
+          CODE_SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+          CODE_SIGN_TIMESTAMP_ARG: "--timestamp"
+        run: |
+          set -euo pipefail
+          if [[ -z "${CODE_SIGN_IDENTITY:-}" ]]; then
+            echo "Missing DEVELOPER_ID_APPLICATION secret." >&2
+            exit 2
+          fi
+          ./script/build_dmg.sh
+          codesign --verify --strict --deep --verbose=2 dist/AdminDoctor.app
+          codesign -dv --verbose=4 dist/AdminDoctor.app
+
+      - name: Notarize and staple
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: ./script/notarize_dmg.sh dist/AdminDoctor.dmg
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdminDoctor-signed-dmg
+          path: dist/AdminDoctor.dmg
+
+      - name: Publish GitHub release asset
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --title "AdminDoctor $GITHUB_REF_NAME" --notes "Signed and notarized AdminDoctor release."
+          gh release upload "$GITHUB_REF_NAME" dist/AdminDoctor.dmg --clobber

@@ -13,10 +13,12 @@ final class DiagnosticStore: ObservableObject {
     @Published private(set) var isScanningLocalNetwork = false
     @Published private(set) var isRunningNetworkProbe = false
     @Published private(set) var isManagingPrivilegedHelper = false
+    @Published private(set) var isRunningPrivilegedCleanup = false
     @Published private(set) var networkCacheSummary: NetworkCacheFlushSummary?
     @Published private(set) var localNetworkScanSnapshot: LocalNetworkScanSnapshot?
     @Published private(set) var networkProbeSummary: NetworkProbeSummary?
     @Published private(set) var privilegedHelperStatus: PrivilegedHelperStatus
+    @Published private(set) var privilegedCleanupPlan: PrivilegedCleanupPlan?
     @Published private(set) var adminPrivilegeState: AdminPrivilegeState = .notRequested
     @Published private(set) var scanHistory: [ScanHistoryEntry] = []
     @Published var selectedCleanupIDs: Set<UUID> = []
@@ -28,6 +30,7 @@ final class DiagnosticStore: ObservableObject {
     @Published var localNetworkScanError: String?
     @Published var networkProbeError: String?
     @Published var privilegedHelperMessage: String?
+    @Published var privilegedCleanupNotice: String?
 
     private let runner: any CommandRunning
     private let suite: DiagnosticSuite
@@ -161,13 +164,13 @@ final class DiagnosticStore: ObservableObject {
                 data: Data(html.utf8)
             )
         case .pdf:
-            let markdown = exporter.markdown(results: results, context: context)
-            let data = PDFReportRenderer.data(markdown: markdown)
+            let report = exporter.report(results: results, context: context)
+            let data = PDFReportRenderer.data(report: report)
             return ReportPreview(
                 format: format,
                 title: L10n.string("common.pdf"),
                 kind: .pdf,
-                text: markdown,
+                text: exporter.markdown(results: results, context: context),
                 data: data
             )
         }
@@ -180,6 +183,8 @@ final class DiagnosticStore: ObservableObject {
 
         isScanningCleanup = true
         cleanupError = nil
+        privilegedCleanupPlan = nil
+        privilegedCleanupNotice = nil
         if clearNotice {
             cleanupNotice = nil
             cleanupFailures = []
@@ -295,6 +300,10 @@ final class DiagnosticStore: ObservableObject {
         localNetworkScanError = nil
     }
 
+    func localNetworkCSVData() -> Data? {
+        localNetworkScanSnapshot.map(LocalNetworkCSVExporter.data(snapshot:))
+    }
+
     func ping(host: String) async {
         await runNetworkProbe(host: host, kind: .ping)
     }
@@ -317,6 +326,10 @@ final class DiagnosticStore: ObservableObject {
 
     func proxyReachability() async {
         await runNetworkProbe(host: "", kind: .proxyReachability)
+    }
+
+    func externalIP() async {
+        await runNetworkProbe(host: "", kind: .externalIP)
     }
 
     func refreshPrivilegedHelperStatus() {
@@ -371,6 +384,76 @@ final class DiagnosticStore: ObservableObject {
         isManagingPrivilegedHelper = false
     }
 
+    func planPrivilegedCleanup() async {
+        guard !isRunningPrivilegedCleanup else {
+            return
+        }
+
+        let paths = privilegedCleanupCandidatePaths()
+        guard !paths.isEmpty else {
+            privilegedCleanupNotice = L10n.string("cleanup.privileged.noCandidates")
+            return
+        }
+
+        isRunningPrivilegedCleanup = true
+        privilegedCleanupNotice = nil
+        let controller = privilegedHelperController
+        let result = await Task.detached(priority: .userInitiated) {
+            Result { try controller.planSystemCleanup(paths: paths) }
+        }.value
+
+        switch result {
+        case .success(let plan):
+            privilegedCleanupPlan = plan
+            privilegedCleanupNotice = L10n.format(
+                "cleanup.privileged.planSummary",
+                plan.eligibleCandidates.count,
+                plan.eligibleBytesLabel,
+                plan.rejected.count
+            )
+        case .failure(let error):
+            privilegedCleanupNotice = error.localizedDescription
+        }
+        refreshPrivilegedHelperStatus()
+        isRunningPrivilegedCleanup = false
+    }
+
+    func quarantinePrivilegedCleanup() async {
+        guard !isRunningPrivilegedCleanup else {
+            return
+        }
+
+        let paths = privilegedCleanupPlan?.eligibleCandidates.map(\.path) ?? privilegedCleanupCandidatePaths()
+        guard !paths.isEmpty else {
+            privilegedCleanupNotice = L10n.string("cleanup.privileged.noCandidates")
+            return
+        }
+
+        isRunningPrivilegedCleanup = true
+        privilegedCleanupNotice = nil
+        let controller = privilegedHelperController
+        let result = await Task.detached(priority: .userInitiated) {
+            Result { try controller.quarantineSystemCleanup(paths: paths) }
+        }.value
+
+        switch result {
+        case .success(let quarantineResult):
+            privilegedCleanupNotice = L10n.format(
+                "cleanup.privileged.quarantineSummary",
+                quarantineResult.moved.count,
+                quarantineResult.movedBytesLabel,
+                quarantineResult.failures.count,
+                quarantineResult.quarantineRoot
+            )
+            privilegedCleanupPlan = nil
+            await scanCleanup(clearNotice: false)
+        case .failure(let error):
+            privilegedCleanupNotice = error.localizedDescription
+        }
+        refreshPrivilegedHelperStatus()
+        isRunningPrivilegedCleanup = false
+    }
+
     var totalSummary: (fail: Int, warning: Int, pass: Int, info: Int) {
         (
             results.filter { $0.severity == .fail }.count,
@@ -412,6 +495,8 @@ final class DiagnosticStore: ObservableObject {
                     return try service.captivePortal()
                 case .proxyReachability:
                     return try service.proxyReachability()
+                case .externalIP:
+                    return try service.externalIP()
                 }
             }
         }.value
@@ -465,6 +550,12 @@ final class DiagnosticStore: ObservableObject {
         }
 
         return L10n.format("cleanup.notice.trashed", summary.trashed.count, summary.reclaimedBytesLabel)
+    }
+
+    private func privilegedCleanupCandidatePaths() -> [String] {
+        cleanupSnapshot?.candidates
+            .filter(\.requiresPrivilegedHelper)
+            .map(\.path) ?? []
     }
 
     private func recordScanHistory(startedAt: Date, results: [DiagnosticResult]) {
