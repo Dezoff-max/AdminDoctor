@@ -8,13 +8,27 @@ The `AdminDoctorPrivilegedHelper` executable target is a development scaffold fo
 swift run AdminDoctorPrivilegedHelper scan-system-cleanup
 ```
 
-Release bundles copy the helper scaffold to:
+Release bundles copy the helper executable to:
 
 ```text
 AdminDoctor.app/Contents/Library/LaunchServices/AdminDoctorPrivilegedHelper
 ```
 
-The main app reports whether that bundled helper exists, whether a system helper is installed at `/Library/PrivilegedHelperTools/dev.admindoctor.AdminDoctorPrivilegedHelper`, and whether the matching LaunchDaemon plist exists.
+Release bundles also include the SMAppService LaunchDaemon plist at:
+
+```text
+AdminDoctor.app/Contents/Library/LaunchDaemons/dev.admindoctor.AdminDoctorPrivilegedHelper.plist
+```
+
+The plist uses `BundleProgram` and exposes the Mach service `dev.admindoctor.AdminDoctorPrivilegedHelper`. The main app can register/unregister the daemon with `SMAppService.daemon(plistName:)` and ping the helper through XPC after macOS enables the daemon.
+
+For production signing, build with a valid Developer ID or development signing identity:
+
+```sh
+CODE_SIGN_IDENTITY="Developer ID Application: Example Team (TEAMID)" ./script/build_dmg.sh
+```
+
+This Mac currently needs a valid code signing identity before the helper can be approved as a production signed daemon.
 
 Deletion from privileged locations is not implemented here. Before AdminDoctor can safely clean system paths, the helper must be:
 

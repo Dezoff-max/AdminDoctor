@@ -40,7 +40,9 @@ struct LocalNetworkScanView: View {
                 vendorText(for: device),
                 device.vendorName,
                 device.hostname,
-                device.interfaceName
+                device.interfaceName,
+                device.openPorts.map(String.init).joined(separator: " "),
+                deviceTypeTitle(device.deviceType)
             ]
             .compactMap { $0?.localizedCaseInsensitiveContains(query) }
             .contains(true)
@@ -267,77 +269,99 @@ private struct DeviceResultsTable: View {
     let gateway: String?
     let emptyText: String
 
+    private let tableWidth: CGFloat = 1060
     private let columns = [
         GridItem(.fixed(70), spacing: 0, alignment: .leading),
-        GridItem(.flexible(minimum: 150), spacing: 0, alignment: .leading),
-        GridItem(.fixed(130), spacing: 0, alignment: .leading),
-        GridItem(.flexible(minimum: 140), spacing: 0, alignment: .leading),
-        GridItem(.fixed(150), spacing: 0, alignment: .leading)
+        GridItem(.fixed(112), spacing: 0, alignment: .leading),
+        GridItem(.fixed(220), spacing: 0, alignment: .leading),
+        GridItem(.fixed(135), spacing: 0, alignment: .leading),
+        GridItem(.fixed(230), spacing: 0, alignment: .leading),
+        GridItem(.fixed(120), spacing: 0, alignment: .leading),
+        GridItem(.fixed(173), spacing: 0, alignment: .leading)
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
-                HeaderCell(L10n.string("network.local.columnStatus"))
-                HeaderCell(L10n.string("network.local.columnName"))
-                HeaderCell("IP")
-                HeaderCell(L10n.string("network.local.columnVendor"))
-                HeaderCell(L10n.string("network.local.columnMac"))
-            }
-            .background(.background.opacity(0.72))
+        ScrollView(.horizontal, showsIndicators: true) {
+            VStack(spacing: 0) {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
+                    HeaderCell(L10n.string("network.local.columnStatus"))
+                    HeaderCell(L10n.string("network.local.columnType"))
+                    HeaderCell(L10n.string("network.local.columnName"))
+                    HeaderCell("IP")
+                    HeaderCell(L10n.string("network.local.columnVendor"))
+                    HeaderCell(L10n.string("network.local.columnPorts"))
+                    HeaderCell(L10n.string("network.local.columnMac"))
+                }
+                .background(.background.opacity(0.72))
 
-            Divider()
+                Divider()
 
-            if devices.isEmpty {
-                Text(emptyText)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 80)
-            } else {
-                LazyVStack(spacing: 0) {
-                    ForEach(devices) { device in
-                        LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
-                            StatusCell(device: device, gateway: gateway)
-                            Text(title(for: device, gateway: gateway))
-                                .font(.callout.weight(.medium))
-                                .lineLimit(1)
-                                .textSelection(.enabled)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 8)
-                            Text(device.ipAddress)
-                                .font(.callout.monospaced())
-                                .lineLimit(1)
-                                .textSelection(.enabled)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 8)
-                            Text(vendorText(for: device))
-                                .font(.callout)
-                                .foregroundStyle(device.vendorName == nil ? .secondary : .primary)
-                                .lineLimit(1)
-                                .textSelection(.enabled)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 8)
-                            Text(device.macAddress ?? L10n.string("network.local.noMac"))
-                                .font(.callout.monospaced())
-                                .lineLimit(1)
-                                .textSelection(.enabled)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 8)
-                        }
-                        .background(rowBackground(for: device))
+                if devices.isEmpty {
+                    Text(emptyText)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 80)
+                } else {
+                    LazyVStack(spacing: 0) {
+                        ForEach(devices) { device in
+                            LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
+                                StatusCell(device: device, gateway: gateway)
+                                Text(deviceTypeTitle(device.deviceType))
+                                    .font(.callout)
+                                    .lineLimit(1)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
+                                Text(title(for: device, gateway: gateway))
+                                    .font(.callout.weight(.medium))
+                                    .lineLimit(1)
+                                    .textSelection(.enabled)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
+                                Text(device.ipAddress)
+                                    .font(.callout.monospaced())
+                                    .lineLimit(1)
+                                    .textSelection(.enabled)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
+                                Text(vendorText(for: device))
+                                    .font(.callout)
+                                    .foregroundStyle(device.vendorName == nil ? .secondary : .primary)
+                                    .lineLimit(1)
+                                    .textSelection(.enabled)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
+                                Text(portsText(for: device))
+                                    .font(.callout.monospacedDigit())
+                                    .foregroundStyle(device.openPorts.isEmpty ? .secondary : .primary)
+                                    .lineLimit(1)
+                                    .textSelection(.enabled)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
+                                Text(device.macAddress ?? L10n.string("network.local.noMac"))
+                                    .font(.callout.monospaced())
+                                    .lineLimit(1)
+                                    .textSelection(.enabled)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
+                            }
+                            .background(rowBackground(for: device))
 
-                        if device.id != devices.last?.id {
-                            Divider()
+                            if device.id != devices.last?.id {
+                                Divider()
+                            }
                         }
                     }
                 }
             }
+            .frame(width: tableWidth, alignment: .leading)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(.separator.opacity(0.9), lineWidth: 1)
+            }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .stroke(.separator.opacity(0.9), lineWidth: 1)
-        }
+        .scrollIndicators(.visible)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func rowBackground(for device: LocalNetworkDevice) -> Color {
@@ -384,6 +408,30 @@ private struct StatusCell: View {
         if device.ipAddress == gateway {
             return "wifi.router"
         }
+        switch device.deviceType {
+        case .router:
+            return "wifi.router"
+        case .mac:
+            return "desktopcomputer"
+        case .windows:
+            return "display"
+        case .linux:
+            return "terminal"
+        case .printer:
+            return "printer"
+        case .nas:
+            return "externaldrive.connected.to.line.below"
+        case .phoneOrTablet:
+            return "iphone"
+        case .media:
+            return "tv"
+        case .web:
+            return "globe"
+        case .remoteAccess:
+            return "rectangle.connected.to.line.below"
+        case .unknown:
+            break
+        }
         if device.hostname != nil {
             return "desktopcomputer"
         }
@@ -426,6 +474,17 @@ private func vendorText(for device: LocalNetworkDevice) -> String {
     }
 
     return device.vendorName ?? L10n.string("network.local.unknownVendor")
+}
+
+private func portsText(for device: LocalNetworkDevice) -> String {
+    guard !device.openPorts.isEmpty else {
+        return L10n.string("network.local.noOpenPorts")
+    }
+    return device.openPorts.map(String.init).joined(separator: ", ")
+}
+
+private func deviceTypeTitle(_ type: LocalNetworkDeviceType) -> String {
+    L10n.string("network.local.type.\(type.rawValue)")
 }
 
 private func lastAddressSegment(_ ipAddress: String) -> String {

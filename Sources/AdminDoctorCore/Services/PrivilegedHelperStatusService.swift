@@ -3,6 +3,8 @@ import Foundation
 public enum PrivilegedHelperInstallState: String, Codable, Equatable, Sendable {
     case notBundled
     case bundledOnly
+    case requiresApproval
+    case registered
     case installed
 }
 
@@ -15,6 +17,8 @@ public struct PrivilegedHelperStatus: Codable, Equatable, Sendable {
     public var installedToolPresent: Bool
     public var launchDaemonPresent: Bool
     public var codeSignatureVerified: Bool?
+    public var serviceManagementStatus: String?
+    public var xpcVersion: String?
     public var state: PrivilegedHelperInstallState
     public var checkedAt: Date
 
@@ -27,6 +31,8 @@ public struct PrivilegedHelperStatus: Codable, Equatable, Sendable {
         installedToolPresent: Bool,
         launchDaemonPresent: Bool,
         codeSignatureVerified: Bool?,
+        serviceManagementStatus: String? = nil,
+        xpcVersion: String? = nil,
         state: PrivilegedHelperInstallState,
         checkedAt: Date
     ) {
@@ -38,8 +44,37 @@ public struct PrivilegedHelperStatus: Codable, Equatable, Sendable {
         self.installedToolPresent = installedToolPresent
         self.launchDaemonPresent = launchDaemonPresent
         self.codeSignatureVerified = codeSignatureVerified
+        self.serviceManagementStatus = serviceManagementStatus
+        self.xpcVersion = xpcVersion
         self.state = state
         self.checkedAt = checkedAt
+    }
+
+    public func withRuntimeStatus(serviceManagementStatus: String?, xpcVersion: String?) -> PrivilegedHelperStatus {
+        let resolvedState: PrivilegedHelperInstallState
+        switch serviceManagementStatus {
+        case "Enabled":
+            resolvedState = .registered
+        case "Requires approval":
+            resolvedState = .requiresApproval
+        default:
+            resolvedState = state
+        }
+
+        return PrivilegedHelperStatus(
+            label: label,
+            bundledToolPath: bundledToolPath,
+            installedToolPath: installedToolPath,
+            launchDaemonPath: launchDaemonPath,
+            bundledToolPresent: bundledToolPresent,
+            installedToolPresent: installedToolPresent,
+            launchDaemonPresent: launchDaemonPresent,
+            codeSignatureVerified: codeSignatureVerified,
+            serviceManagementStatus: serviceManagementStatus,
+            xpcVersion: xpcVersion,
+            state: resolvedState,
+            checkedAt: checkedAt
+        )
     }
 }
 

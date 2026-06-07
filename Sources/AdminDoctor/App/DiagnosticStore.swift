@@ -12,6 +12,7 @@ final class DiagnosticStore: ObservableObject {
     @Published private(set) var isClearingDNSCache = false
     @Published private(set) var isScanningLocalNetwork = false
     @Published private(set) var isRunningNetworkProbe = false
+    @Published private(set) var isManagingPrivilegedHelper = false
     @Published private(set) var networkCacheSummary: NetworkCacheFlushSummary?
     @Published private(set) var localNetworkScanSnapshot: LocalNetworkScanSnapshot?
     @Published private(set) var networkProbeSummary: NetworkProbeSummary?
@@ -26,6 +27,7 @@ final class DiagnosticStore: ObservableObject {
     @Published var networkCacheError: String?
     @Published var localNetworkScanError: String?
     @Published var networkProbeError: String?
+    @Published var privilegedHelperMessage: String?
 
     private let runner: any CommandRunning
     private let suite: DiagnosticSuite
@@ -35,6 +37,7 @@ final class DiagnosticStore: ObservableObject {
     private let localNetworkScanner: LocalNetworkScanner
     private let networkToolkitService: NetworkToolkitService
     private let privilegedHelperStatusService: PrivilegedHelperStatusService
+    private let privilegedHelperController: PrivilegedHelperController
     private let adminPrivilegeManager: AdminPrivilegeManager
     private var didRequestLaunchPrivileges = false
     private let scanHistoryLimit = 20
@@ -47,6 +50,7 @@ final class DiagnosticStore: ObservableObject {
         localNetworkScanner: LocalNetworkScanner? = nil,
         networkToolkitService: NetworkToolkitService? = nil,
         privilegedHelperStatusService: PrivilegedHelperStatusService? = nil,
+        privilegedHelperController: PrivilegedHelperController = PrivilegedHelperController(),
         adminPrivilegeManager: AdminPrivilegeManager = AdminPrivilegeManager()
     ) {
         self.runner = runner
@@ -57,9 +61,11 @@ final class DiagnosticStore: ObservableObject {
         self.networkToolkitService = networkToolkitService ?? NetworkToolkitService(runner: runner)
         let helperStatusService = privilegedHelperStatusService ?? PrivilegedHelperStatusService(runner: runner)
         self.privilegedHelperStatusService = helperStatusService
+        self.privilegedHelperController = privilegedHelperController
         self.adminPrivilegeManager = adminPrivilegeManager
         self.scanHistory = Self.loadScanHistory(key: scanHistoryDefaultsKey)
         self.privilegedHelperStatus = helperStatusService.status(bundledToolPath: Self.bundledPrivilegedHelperPath())
+            .withRuntimeStatus(serviceManagementStatus: privilegedHelperController.serviceStatusTitle(), xpcVersion: nil)
     }
 
     func runDiagnostics() async {
@@ -119,21 +125,51 @@ final class DiagnosticStore: ObservableObject {
     }
 
     func writeReport(format: ReportFormat, to url: URL) throws {
+        let preview = try makeReportPreview(format: format)
+        try preview.data.write(to: url, options: [.atomic])
+    }
+
+    func makeReportPreview(format: ReportFormat) throws -> ReportPreview {
         let context = RedactionContext.current(runner: runner, results: results)
         switch format {
         case .markdown:
             let markdown = exporter.markdown(results: results, context: context)
-            try markdown.write(to: url, atomically: true, encoding: .utf8)
+            return ReportPreview(
+                format: format,
+                title: L10n.string("common.markdown"),
+                kind: .text,
+                text: markdown,
+                data: Data(markdown.utf8)
+            )
         case .json:
             let data = try exporter.jsonData(results: results, context: context)
-            try data.write(to: url, options: [.atomic])
+            let text = String(data: data, encoding: .utf8) ?? ""
+            return ReportPreview(
+                format: format,
+                title: L10n.string("common.json"),
+                kind: .text,
+                text: text,
+                data: data
+            )
         case .html:
             let html = exporter.html(results: results, context: context)
-            try html.write(to: url, atomically: true, encoding: .utf8)
+            return ReportPreview(
+                format: format,
+                title: L10n.string("common.html"),
+                kind: .html,
+                text: html,
+                data: Data(html.utf8)
+            )
         case .pdf:
             let markdown = exporter.markdown(results: results, context: context)
             let data = PDFReportRenderer.data(markdown: markdown)
-            try data.write(to: url, options: [.atomic])
+            return ReportPreview(
+                format: format,
+                title: L10n.string("common.pdf"),
+                kind: .pdf,
+                text: markdown,
+                data: data
+            )
         }
     }
 
@@ -284,7 +320,55 @@ final class DiagnosticStore: ObservableObject {
     }
 
     func refreshPrivilegedHelperStatus() {
+        let currentVersion = privilegedHelperStatus.xpcVersion
         privilegedHelperStatus = privilegedHelperStatusService.status(bundledToolPath: Self.bundledPrivilegedHelperPath())
+            .withRuntimeStatus(
+                serviceManagementStatus: privilegedHelperController.serviceStatusTitle(),
+                xpcVersion: currentVersion
+            )
+    }
+
+    func registerPrivilegedHelper() async {
+        let controller = privilegedHelperController
+        await runPrivilegedHelperOperation(successMessage: L10n.string("helper.operation.registered")) {
+            try controller.register()
+        }
+    }
+
+    func unregisterPrivilegedHelper() async {
+        let controller = privilegedHelperController
+        await runPrivilegedHelperOperation(successMessage: L10n.string("helper.operation.unregistered")) {
+            try controller.unregister()
+        }
+    }
+
+    func pingPrivilegedHelper() async {
+        guard !isManagingPrivilegedHelper else {
+            return
+        }
+
+        isManagingPrivilegedHelper = true
+        privilegedHelperMessage = nil
+
+        let controller = privilegedHelperController
+        let result = await Task.detached(priority: .userInitiated) {
+            Result { try controller.helperVersion() }
+        }.value
+
+        switch result {
+        case .success(let version):
+            privilegedHelperStatus = privilegedHelperStatusService.status(bundledToolPath: Self.bundledPrivilegedHelperPath())
+                .withRuntimeStatus(
+                    serviceManagementStatus: privilegedHelperController.serviceStatusTitle(),
+                    xpcVersion: version
+                )
+            privilegedHelperMessage = L10n.format("helper.operation.pinged", version)
+        case .failure(let error):
+            refreshPrivilegedHelperStatus()
+            privilegedHelperMessage = error.localizedDescription
+        }
+
+        isManagingPrivilegedHelper = false
     }
 
     var totalSummary: (fail: Int, warning: Int, pass: Int, info: Int) {
@@ -343,6 +427,32 @@ final class DiagnosticStore: ObservableObject {
         }
 
         isRunningNetworkProbe = false
+    }
+
+    private func runPrivilegedHelperOperation(
+        successMessage: String,
+        operation: @escaping @Sendable () throws -> Void
+    ) async {
+        guard !isManagingPrivilegedHelper else {
+            return
+        }
+
+        isManagingPrivilegedHelper = true
+        privilegedHelperMessage = nil
+
+        let result = await Task.detached(priority: .userInitiated) {
+            Result { try operation() }
+        }.value
+
+        switch result {
+        case .success:
+            privilegedHelperMessage = successMessage
+        case .failure(let error):
+            privilegedHelperMessage = error.localizedDescription
+        }
+
+        refreshPrivilegedHelperStatus()
+        isManagingPrivilegedHelper = false
     }
 
     private func cleanupNotice(for summary: CleanupExecutionSummary) -> String {

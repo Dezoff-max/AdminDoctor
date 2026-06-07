@@ -6,6 +6,8 @@ public struct LocalNetworkDevice: Codable, Equatable, Identifiable, Sendable {
     public var hostname: String?
     public var vendorName: String?
     public var interfaceName: String?
+    public var openPorts: [Int]
+    public var deviceType: LocalNetworkDeviceType
     public var source: String
 
     public var id: String {
@@ -18,6 +20,8 @@ public struct LocalNetworkDevice: Codable, Equatable, Identifiable, Sendable {
         hostname: String?,
         vendorName: String? = nil,
         interfaceName: String?,
+        openPorts: [Int] = [],
+        deviceType: LocalNetworkDeviceType = .unknown,
         source: String
     ) {
         self.ipAddress = ipAddress
@@ -25,8 +29,24 @@ public struct LocalNetworkDevice: Codable, Equatable, Identifiable, Sendable {
         self.hostname = hostname
         self.vendorName = vendorName
         self.interfaceName = interfaceName
+        self.openPorts = openPorts
+        self.deviceType = deviceType
         self.source = source
     }
+}
+
+public enum LocalNetworkDeviceType: String, Codable, Equatable, Sendable {
+    case router
+    case mac
+    case windows
+    case linux
+    case printer
+    case nas
+    case phoneOrTablet
+    case media
+    case web
+    case remoteAccess
+    case unknown
 }
 
 public struct LocalNetworkScanSnapshot: Codable, Equatable, Sendable {
@@ -216,6 +236,18 @@ enum LocalNetworkParser {
         return nil
     }
 
+    static func parseDigShortName(_ output: String) -> String? {
+        for line in ParserHelpers.trimmedNonEmptyLines(output) {
+            guard !line.hasPrefix(";") else {
+                continue
+            }
+            if let normalized = normalizedHostName(line) {
+                return normalized
+            }
+        }
+        return nil
+    }
+
     static func normalizedHostName(_ value: String?) -> String? {
         guard var value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
             return nil
@@ -379,6 +411,7 @@ public final class LocalNetworkScanner: @unchecked Sendable {
     private let now: @Sendable () -> Date
     private let pingSweepEnabled: Bool
     private let nameResolutionEnabled: Bool
+    private let portProbeEnabled: Bool
     private let scanConcurrency: Int
 
     public init(
@@ -386,12 +419,14 @@ public final class LocalNetworkScanner: @unchecked Sendable {
         now: @escaping @Sendable () -> Date = { Date() },
         pingSweepEnabled: Bool = true,
         nameResolutionEnabled: Bool = true,
+        portProbeEnabled: Bool = true,
         scanConcurrency: Int = 48
     ) {
         self.runner = runner
         self.now = now
         self.pingSweepEnabled = pingSweepEnabled
         self.nameResolutionEnabled = nameResolutionEnabled
+        self.portProbeEnabled = portProbeEnabled
         self.scanConcurrency = max(1, scanConcurrency)
     }
 
@@ -417,6 +452,9 @@ public final class LocalNetworkScanner: @unchecked Sendable {
         let resolvedHostnames = nameResolutionEnabled
             ? resolveHostnames(from: parsedDevices)
             : [:]
+        let openPorts = portProbeEnabled
+            ? probeOpenPorts(from: parsedDevices, on: selectedNetwork)
+            : [:]
         let devices = parsedDevices
             .filter { device in
                 device.interfaceName == selectedNetwork.interfaceName
@@ -424,7 +462,12 @@ public final class LocalNetworkScanner: @unchecked Sendable {
                     && device.ipAddress != selectedNetwork.address
             }
             .map { device in
-                enrichDevice(device, resolvedHostnames: resolvedHostnames)
+                enrichDevice(
+                    device,
+                    gateway: effectiveGateway,
+                    resolvedHostnames: resolvedHostnames,
+                    openPorts: openPorts[device.ipAddress] ?? []
+                )
             }
             .sorted {
                 guard
@@ -450,14 +493,25 @@ public final class LocalNetworkScanner: @unchecked Sendable {
 
     private func enrichDevice(
         _ device: LocalNetworkDevice,
-        resolvedHostnames: [String: String]
+        gateway: String?,
+        resolvedHostnames: [String: String],
+        openPorts: [Int]
     ) -> LocalNetworkDevice {
-        LocalNetworkDevice(
+        let hostname = device.hostname ?? resolvedHostnames[device.ipAddress]
+        return LocalNetworkDevice(
             ipAddress: device.ipAddress,
             macAddress: device.macAddress,
-            hostname: device.hostname ?? resolvedHostnames[device.ipAddress],
+            hostname: hostname,
             vendorName: device.vendorName,
             interfaceName: device.interfaceName,
+            openPorts: openPorts.sorted(),
+            deviceType: LocalNetworkDeviceClassifier.infer(
+                ipAddress: device.ipAddress,
+                gateway: gateway,
+                hostname: hostname,
+                vendorName: device.vendorName,
+                openPorts: openPorts
+            ),
             source: device.source
         )
     }
@@ -543,6 +597,7 @@ public final class LocalNetworkScanner: @unchecked Sendable {
                 guard
                     let output = try? self.output(Command("/usr/bin/dscacheutil", arguments: ["-q", "host", "-a", "ip_address", address], timeout: 0.7)),
                     let hostname = LocalNetworkParser.parseResolvedHostName(output)
+                        ?? self.resolveMulticastHostName(address)
                 else {
                     return
                 }
@@ -555,6 +610,64 @@ public final class LocalNetworkScanner: @unchecked Sendable {
 
         group.wait()
         return resolved
+    }
+
+    private func resolveMulticastHostName(_ address: String) -> String? {
+        guard
+            let output = try? self.output(Command("/usr/bin/dig", arguments: ["@224.0.0.251", "-p", "5353", "-x", address, "+short", "+time=1", "+tries=1"], timeout: 1.2))
+        else {
+            return nil
+        }
+        return LocalNetworkParser.parseDigShortName(output)
+    }
+
+    private func probeOpenPorts(from devices: [LocalNetworkDevice], on network: LocalIPv4Network) -> [String: [Int]] {
+        let addresses = Array(Set(devices
+            .filter { $0.interfaceName == network.interfaceName && network.contains($0.ipAddress) && $0.ipAddress != network.address }
+            .map(\.ipAddress)))
+            .sorted()
+            .prefix(48)
+        guard !addresses.isEmpty else {
+            return [:]
+        }
+
+        let ports = [22, 80, 443, 445, 548, 631, 9100, 5000, 7000, 8008, 8080, 3389]
+        let queue = DispatchQueue(label: "dev.admindoctor.local-network-port-probe", attributes: .concurrent)
+        let group = DispatchGroup()
+        let semaphore = DispatchSemaphore(value: min(scanConcurrency, 32))
+        let lock = NSLock()
+        var openPortsByAddress: [String: [Int]] = [:]
+
+        for address in addresses {
+            for port in ports {
+                semaphore.wait()
+                group.enter()
+                queue.async {
+                    defer {
+                        semaphore.signal()
+                        group.leave()
+                    }
+
+                    guard self.isPortOpen(address: address, port: port) else {
+                        return
+                    }
+
+                    lock.lock()
+                    openPortsByAddress[address, default: []].append(port)
+                    lock.unlock()
+                }
+            }
+        }
+
+        group.wait()
+        return openPortsByAddress.mapValues { $0.sorted() }
+    }
+
+    private func isPortOpen(address: String, port: Int) -> Bool {
+        guard let result = try? runner.run(Command("/usr/bin/nc", arguments: ["-G", "1", "-z", address, "\(port)"], timeout: 1.25)) else {
+            return false
+        }
+        return result.succeeded
     }
 
     private func output(_ command: Command) throws -> String {
@@ -570,5 +683,51 @@ public final class LocalNetworkScanner: @unchecked Sendable {
         }
 
         return result.stdout
+    }
+}
+
+enum LocalNetworkDeviceClassifier {
+    static func infer(
+        ipAddress: String,
+        gateway: String?,
+        hostname: String?,
+        vendorName: String?,
+        openPorts: [Int]
+    ) -> LocalNetworkDeviceType {
+        if ipAddress == gateway {
+            return .router
+        }
+
+        let text = [hostname, vendorName]
+            .compactMap { $0?.lowercased() }
+            .joined(separator: " ")
+        let ports = Set(openPorts)
+
+        if text.contains("printer") || text.contains("laserjet") || ports.contains(631) || ports.contains(9100) {
+            return .printer
+        }
+        if text.contains("synology") || text.contains("qnap") || text.contains("nas") || ports.contains(548) {
+            return .nas
+        }
+        if text.contains("apple") || text.contains("mac") || text.contains("iphone") || text.contains("ipad") {
+            if text.contains("iphone") || text.contains("ipad") {
+                return .phoneOrTablet
+            }
+            return .mac
+        }
+        if text.contains("windows") || text.contains("microsoft") || ports.contains(3389) {
+            return .windows
+        }
+        if ports.contains(22) {
+            return .linux
+        }
+        if ports.contains(80) || ports.contains(443) || ports.contains(8080) || ports.contains(8008) {
+            return .web
+        }
+        if ports.contains(5000) || ports.contains(7000) {
+            return .media
+        }
+
+        return .unknown
     }
 }

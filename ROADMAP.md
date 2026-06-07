@@ -95,6 +95,18 @@ AdminDoctor is a privacy-first macOS diagnostics app for system administrators, 
 - [x] Set the default macOS window size to 1089 x 894.
 - [x] Clean legacy AdminDoc build artifacts from local packaging scripts.
 
+## v0.1.9 - Privileged Helper Flow And LAN Inspector
+
+- [x] Add a launchd plist for `SMAppService.daemon(plistName:)` registration.
+- [x] Add privileged XPC protocol wiring and a read-only helper service.
+- [x] Add app controls to register, unregister, refresh, and ping the helper.
+- [x] Add build-script signing hooks for app and helper bundles.
+- [x] Improve LAN scan with Bonjour/mDNS name hints.
+- [x] Probe common local ports and infer device type from gateway, vendor, hostname, and ports.
+- [x] Add type and open-port columns to the LAN table.
+- [x] Add horizontal scrolling to the LAN results table.
+- [x] Add export preview sheets for Markdown, JSON, HTML, and PDF before saving.
+
 ## v0.2.0 - Admin Toolkit Foundation
 
 - [ ] Add a tools sidebar model separate from diagnostic categories.
@@ -102,7 +114,7 @@ AdminDoctor is a privacy-first macOS diagnostics app for system administrators, 
 - [ ] Add per-tool risk labels: read-only, reversible, privileged-later.
 - [ ] Add dry-run summaries for every future action.
 - [ ] Add local-only preferences for defaults and retention windows.
-- [ ] Add a signed privileged helper for operations that truly need root.
+- [ ] Ship signed and notarized privileged-helper releases for operations that truly need root.
 
 ## v0.3.0 - MDM And Profiles
 
@@ -143,8 +155,8 @@ AdminDoctor is a privacy-first macOS diagnostics app for system administrators, 
 ## v0.7.0 - Swiss Army Admin Tools
 
 - [x] Network quick tests: ping and traceroute.
-- [ ] Network quick tests: DNS lookup, route, captive portal signal, proxy reachability.
-- [ ] Permissions inspector: app TCC status, Full Disk Access signal, accessibility permission signal.
+- [x] Network quick tests: DNS lookup, route, captive portal signal, proxy reachability.
+- [x] Permissions inspector: app TCC status, Full Disk Access signal, accessibility permission signal.
 - [ ] App inventory: signed/notarized status, quarantine flag, architecture, last opened date.
 - [ ] Login items and background services inspector.
 - [ ] Software Update and Rosetta status.

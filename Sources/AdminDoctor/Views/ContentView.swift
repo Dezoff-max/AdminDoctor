@@ -7,6 +7,7 @@ struct ContentView: View {
     @ObservedObject var store: DiagnosticStore
     @SceneStorage("selectedCategory") private var selectedCategoryRaw = DiagnosticCategory.system.rawValue
     @AppStorage(L10n.languagePreferenceKey) private var languageRaw = AppLanguage.systemDefault.rawValue
+    @State private var reportPreview: ReportPreview?
 
     private var selectedCategory: DiagnosticCategory {
         DiagnosticCategory(rawValue: selectedCategoryRaw) ?? .system
@@ -45,6 +46,8 @@ struct ContentView: View {
                 isRunningNetworkProbe: store.isRunningNetworkProbe,
                 networkProbeError: store.networkProbeError,
                 privilegedHelperStatus: store.privilegedHelperStatus,
+                isManagingPrivilegedHelper: store.isManagingPrivilegedHelper,
+                privilegedHelperMessage: store.privilegedHelperMessage,
                 scanCleanup: {
                     Task { await store.scanCleanup() }
                 },
@@ -80,6 +83,15 @@ struct ContentView: View {
                 },
                 refreshPrivilegedHelperStatus: {
                     store.refreshPrivilegedHelperStatus()
+                },
+                registerPrivilegedHelper: {
+                    Task { await store.registerPrivilegedHelper() }
+                },
+                unregisterPrivilegedHelper: {
+                    Task { await store.unregisterPrivilegedHelper() }
+                },
+                pingPrivilegedHelper: {
+                    Task { await store.pingPrivilegedHelper() }
                 }
             )
         }
@@ -97,22 +109,22 @@ struct ContentView: View {
 
                 Menu {
                     Button(L10n.string("common.markdown")) {
-                        export(.markdown)
+                        previewExport(.markdown)
                     }
                     .disabled(store.results.isEmpty)
 
                     Button(L10n.string("common.json")) {
-                        export(.json)
+                        previewExport(.json)
                     }
                     .disabled(store.results.isEmpty)
 
                     Button(L10n.string("common.html")) {
-                        export(.html)
+                        previewExport(.html)
                     }
                     .disabled(store.results.isEmpty)
 
                     Button(L10n.string("common.pdf")) {
-                        export(.pdf)
+                        previewExport(.pdf)
                     }
                     .disabled(store.results.isEmpty)
                 } label: {
@@ -142,14 +154,27 @@ struct ContentView: View {
         } message: {
             Text(store.exportError ?? L10n.string("diagnostics.unknownError"))
         }
+        .sheet(item: $reportPreview) { preview in
+            ReportPreviewSheet(preview: preview) {
+                save(preview)
+            }
+        }
     }
 
-    private func export(_ format: ReportFormat) {
+    private func previewExport(_ format: ReportFormat) {
+        do {
+            reportPreview = try store.makeReportPreview(format: format)
+        } catch {
+            store.exportError = error.localizedDescription
+        }
+    }
+
+    private func save(_ preview: ReportPreview) {
         let panel = NSSavePanel()
         panel.canCreateDirectories = true
-        panel.nameFieldStringValue = "AdminDoctor-support-report.\(format.fileExtension)"
+        panel.nameFieldStringValue = "AdminDoctor-support-report.\(preview.format.fileExtension)"
 
-        switch format {
+        switch preview.format {
         case .markdown:
             panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
         case .json:
@@ -165,7 +190,8 @@ struct ContentView: View {
         }
 
         do {
-            try store.writeReport(format: format, to: url)
+            try preview.data.write(to: url, options: [.atomic])
+            reportPreview = nil
         } catch {
             store.exportError = error.localizedDescription
         }

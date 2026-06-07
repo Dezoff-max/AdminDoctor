@@ -26,6 +26,8 @@ struct CategoryDetailView: View {
     let isRunningNetworkProbe: Bool
     let networkProbeError: String?
     let privilegedHelperStatus: PrivilegedHelperStatus
+    let isManagingPrivilegedHelper: Bool
+    let privilegedHelperMessage: String?
     let scanCleanup: () -> Void
     let moveSelectedCleanupItemsToTrash: () -> Void
     let clearDNSCache: () -> Void
@@ -38,6 +40,9 @@ struct CategoryDetailView: View {
     let captivePortal: () -> Void
     let proxyReachability: () -> Void
     let refreshPrivilegedHelperStatus: () -> Void
+    let registerPrivilegedHelper: () -> Void
+    let unregisterPrivilegedHelper: () -> Void
+    let pingPrivilegedHelper: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,7 +61,12 @@ struct CategoryDetailView: View {
                 if category == .storage {
                     PrivilegedHelperStatusView(
                         status: privilegedHelperStatus,
-                        refresh: refreshPrivilegedHelperStatus
+                        isManaging: isManagingPrivilegedHelper,
+                        message: privilegedHelperMessage,
+                        refresh: refreshPrivilegedHelperStatus,
+                        register: registerPrivilegedHelper,
+                        unregister: unregisterPrivilegedHelper,
+                        ping: pingPrivilegedHelper
                     )
                     .listRowSeparator(.hidden)
 

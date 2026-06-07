@@ -1,9 +1,9 @@
 import AdminDoctorCore
 import Foundation
 
-let helperVersion = "0.1.0"
+let helperVersionString = "0.1.0"
 let arguments = Array(CommandLine.arguments.dropFirst())
-let command = arguments.first ?? "help"
+let command = arguments.first ?? "xpc"
 
 func writeLine(_ text: String, to handle: FileHandle = .standardOutput) {
     handle.write(Data((text + "\n").utf8))
@@ -11,7 +11,7 @@ func writeLine(_ text: String, to handle: FileHandle = .standardOutput) {
 
 func printUsage() {
     writeLine("""
-    AdminDoctorPrivilegedHelper \(helperVersion)
+    AdminDoctorPrivilegedHelper \(helperVersionString)
 
     Commands:
       scan-cleanup          Read-only scan of all configured cleanup candidates and print JSON.
@@ -51,9 +51,50 @@ func scan(scopes: [CleanupScope], verbose: Bool) throws -> CleanupSnapshot {
     return CleanupSnapshot(scannedAt: scannedAt, candidates: candidates, skippedPaths: skippedPaths)
 }
 
+final class AdminDoctorPrivilegedHelperService: NSObject, AdminDoctorPrivilegedHelperXPC {
+    func helperVersion(withReply reply: @escaping (String) -> Void) {
+        reply(helperVersionString)
+    }
+
+    func scanSystemCleanup(withReply reply: @escaping (Data?, String?) -> Void) {
+        do {
+            let snapshot = try scan(scopes: DiskCleanupService.systemCleanupScopes(), verbose: false)
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            reply(try encoder.encode(snapshot), nil)
+        } catch {
+            reply(nil, error.localizedDescription)
+        }
+    }
+}
+
+final class AdminDoctorPrivilegedHelperDelegate: NSObject, NSXPCListenerDelegate {
+    private let service = AdminDoctorPrivilegedHelperService()
+
+    func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
+        connection.exportedInterface = NSXPCInterface(with: AdminDoctorPrivilegedHelperXPC.self)
+        connection.exportedObject = service
+        connection.resume()
+        return true
+    }
+}
+
+func runXPCService() -> Never {
+    let delegate = AdminDoctorPrivilegedHelperDelegate()
+    let listener = NSXPCListener(machServiceName: PrivilegedHelperXPCContract.machServiceName)
+    listener.delegate = delegate
+    listener.resume()
+    RunLoop.current.run()
+    fatalError("XPC listener unexpectedly returned")
+}
+
 switch command {
+case "xpc", "--xpc":
+    runXPCService()
+
 case "--version", "version":
-    writeLine("AdminDoctorPrivilegedHelper \(helperVersion)")
+    writeLine("AdminDoctorPrivilegedHelper \(helperVersionString)")
 
 case "scan-cleanup":
     do {

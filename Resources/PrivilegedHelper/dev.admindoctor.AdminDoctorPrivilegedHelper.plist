@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.admindoctor.AdminDoctorPrivilegedHelper</string>
+  <key>BundleProgram</key>
+  <string>Contents/Library/LaunchServices/AdminDoctorPrivilegedHelper</string>
+  <key>MachServices</key>
+  <dict>
+    <key>dev.admindoctor.AdminDoctorPrivilegedHelper</key>
+    <true/>
+  </dict>
+  <key>AssociatedBundleIdentifiers</key>
+  <array>
+    <string>dev.admindoctor.AdminDoctor</string>
+  </array>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/var/log/AdminDoctorPrivilegedHelper.log</string>
+  <key>StandardErrorPath</key>
+  <string>/var/log/AdminDoctorPrivilegedHelper.err</string>
+</dict>
+</plist>

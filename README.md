@@ -94,6 +94,7 @@ Implemented checks:
 - system proxy state
 - Wi-Fi SSID signal when available
 - local LAN scan with ARP discovery, hostname hints, and offline IEEE OUI manufacturer lookup
+- Bonjour/mDNS hostname hints, common open-port probes, device type inference, and horizontal table scrolling for LAN scan results
 - user-initiated network ping, DNS lookup, traceroute, route table, captive portal, and proxy reachability toolkit
 - MDM enrollment signal
 - installed configuration profile signal
@@ -114,12 +115,14 @@ Safe utility actions:
 - scan the local /24 LAN view and clear displayed LAN scan results
 - run on-demand network toolkit checks from the local Mac
 - inspect bundled and installed privileged-helper status for future system cleanup work
+- register, unregister, and ping the bundled privileged helper through `SMAppService` and XPC when the app is built with a valid signing identity
 
 Interface helpers:
 
 - compact CPU, RAM, disk, and network resource indicators
 - local scan history with fail/warning/pass counts
 - EN/RUS language switch in the sidebar
+- report preview sheet before writing Markdown, JSON, HTML, or PDF exports
 
 ## Privacy
 
@@ -133,7 +136,7 @@ Markdown, JSON, HTML, and PDF exports are redacted by default. The redactor curr
 - MAC addresses
 - Wi-Fi SSID when present in diagnostic results
 
-AdminDoctor does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services. LAN manufacturer lookup uses bundled IEEE Registration Authority CSV data and does not make runtime vendor lookup requests. Captive portal testing contacts Apple's public probe endpoint only when the user presses the Portal button.
+AdminDoctor does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services. LAN manufacturer lookup uses bundled IEEE Registration Authority CSV data and does not make runtime vendor lookup requests. Bonjour/mDNS name hints and port probes stay on the local network. Captive portal testing contacts Apple's public probe endpoint only when the user presses the Portal button.
 
 ## Architecture
 
@@ -159,7 +162,7 @@ Key boundaries:
 - `ProcessRunner` rejects shell and sudo executables and runs fixed executable paths with arguments.
 - Administrator authorization state is handled by `AdminPrivilegeManager`.
 - Safe cleanup logic lives in `DiskCleanupService`, only trashes configured non-privileged locations, and marks system cleanup candidates as helper-required.
-- `AdminDoctorPrivilegedHelper` is bundled as a read-only scaffold for future signed helper work; privileged deletion is intentionally not implemented yet.
+- `AdminDoctorPrivilegedHelper` is bundled with a launchd plist, `SMAppService` registration flow, and a privileged XPC contract for status/read-only helper checks; privileged deletion is intentionally not implemented yet.
 - Providers are small and independently testable.
 - Report export is handled by `ReportExporter`, with PDF rendering in the app target.
 
@@ -187,6 +190,14 @@ Regenerate icons and build a local DMG:
 
 The app and DMG icons are generated locally from `Resources/Icons/AdminDoctorIconSource.png`. `script/render_icon.swift` is a fallback source generator if the PNG is missing; generated `.icns` and `.iconset` outputs are intentionally ignored by git.
 
+Build with a signing identity when testing the privileged helper registration flow:
+
+```sh
+CODE_SIGN_IDENTITY="Developer ID Application: Example Team (TEAMID)" ./script/build_dmg.sh
+```
+
+Without a valid local code-signing identity the app still builds and runs, but the helper is ad-hoc signed and cannot be treated as a production signed privileged helper by macOS.
+
 The Codex app Run button is wired through `.codex/environments/environment.toml`.
 
 ## Reports
@@ -195,6 +206,8 @@ The app exports:
 
 - Markdown support report
 - JSON support report
+- HTML support report
+- PDF support report
 
 ZIP support bundles are intentionally left for a later milestone because they need preview, size estimates, and stricter redaction review.
 

@@ -13,9 +13,12 @@ APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_LAUNCH_SERVICES="$APP_CONTENTS/Library/LaunchServices"
+APP_LAUNCH_DAEMONS="$APP_CONTENTS/Library/LaunchDaemons"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 HELPER_NAME="AdminDoctorPrivilegedHelper"
 HELPER_BINARY="$APP_LAUNCH_SERVICES/$HELPER_NAME"
+HELPER_PLIST_SOURCE="$ROOT_DIR/Resources/PrivilegedHelper/dev.admindoctor.AdminDoctorPrivilegedHelper.plist"
+HELPER_PLIST_DEST="$APP_LAUNCH_DAEMONS/dev.admindoctor.AdminDoctorPrivilegedHelper.plist"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 APP_ICON_SOURCE="$ROOT_DIR/Resources/Icons/AdminDoctor.icns"
 ICON_SCRIPT="$ROOT_DIR/script/generate_icons.sh"
@@ -40,13 +43,17 @@ BUILD_BINARY="$BUILD_DIR/$APP_NAME"
 BUILD_HELPER_BINARY="$BUILD_DIR/$HELPER_NAME"
 
 rm -rf "$APP_BUNDLE"
-mkdir -p "$APP_MACOS" "$APP_RESOURCES" "$APP_LAUNCH_SERVICES"
+mkdir -p "$APP_MACOS" "$APP_RESOURCES" "$APP_LAUNCH_SERVICES" "$APP_LAUNCH_DAEMONS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 
 if [[ -f "$BUILD_HELPER_BINARY" ]]; then
   cp "$BUILD_HELPER_BINARY" "$HELPER_BINARY"
   chmod +x "$HELPER_BINARY"
+fi
+
+if [[ -f "$HELPER_PLIST_SOURCE" ]]; then
+  cp "$HELPER_PLIST_SOURCE" "$HELPER_PLIST_DEST"
 fi
 
 if [[ -f "$APP_ICON_SOURCE" ]]; then
@@ -92,6 +99,13 @@ PLIST
 /usr/bin/xattr -cr "$APP_BUNDLE" 2>/dev/null || true
 /usr/bin/xattr -dr com.apple.provenance "$APP_BUNDLE" 2>/dev/null || true
 /usr/bin/xattr -dr "com.apple.fileprovider.fpfs#P" "$APP_BUNDLE" 2>/dev/null || true
+
+if [[ -n "${CODE_SIGN_IDENTITY:-}" ]]; then
+  if [[ -f "$HELPER_BINARY" ]]; then
+    /usr/bin/codesign --force --options runtime --timestamp=none --sign "$CODE_SIGN_IDENTITY" "$HELPER_BINARY"
+  fi
+  /usr/bin/codesign --force --options runtime --timestamp=none --sign "$CODE_SIGN_IDENTITY" "$APP_BUNDLE"
+fi
 
 open_app() {
   /usr/bin/open -n "$APP_BUNDLE"

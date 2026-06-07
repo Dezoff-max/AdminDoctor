@@ -83,6 +83,47 @@ final class LocalNetworkScannerTests: XCTestCase {
         XCTAssertNil(LocalNetworkParser.parseResolvedHostName("ip_address: 192.168.50.45"))
     }
 
+    func testParsesDigShortName() {
+        let output = """
+        printer.local.
+        """
+
+        XCTAssertEqual(LocalNetworkParser.parseDigShortName(output), "printer.local")
+    }
+
+    func testInfersDeviceTypeFromGatewayVendorAndPorts() {
+        XCTAssertEqual(
+            LocalNetworkDeviceClassifier.infer(
+                ipAddress: "192.168.50.1",
+                gateway: "192.168.50.1",
+                hostname: nil,
+                vendorName: "TP-Link Systems Inc",
+                openPorts: [80]
+            ),
+            .router
+        )
+        XCTAssertEqual(
+            LocalNetworkDeviceClassifier.infer(
+                ipAddress: "192.168.50.45",
+                gateway: "192.168.50.1",
+                hostname: "printer.local",
+                vendorName: nil,
+                openPorts: [631, 9100]
+            ),
+            .printer
+        )
+        XCTAssertEqual(
+            LocalNetworkDeviceClassifier.infer(
+                ipAddress: "192.168.50.60",
+                gateway: "192.168.50.1",
+                hostname: "nas.local",
+                vendorName: "Synology Incorporated",
+                openPorts: [548]
+            ),
+            .nas
+        )
+    }
+
     func testScannerUsesDefaultInterfaceAndARPTable() throws {
         let runner = LocalNetworkScannerMockRunner(results: [
             "route -n get default": CommandResult(stdout: """
@@ -107,7 +148,8 @@ final class LocalNetworkScannerTests: XCTestCase {
             runner: runner,
             now: { date },
             pingSweepEnabled: false,
-            nameResolutionEnabled: false
+            nameResolutionEnabled: false,
+            portProbeEnabled: false
         )
 
         let snapshot = try scanner.scan()
@@ -140,7 +182,8 @@ final class LocalNetworkScannerTests: XCTestCase {
         let scanner = LocalNetworkScanner(
             runner: runner,
             pingSweepEnabled: false,
-            nameResolutionEnabled: false
+            nameResolutionEnabled: false,
+            portProbeEnabled: false
         )
 
         let snapshot = try scanner.scan()
