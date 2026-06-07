@@ -12,7 +12,10 @@ APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
+APP_LAUNCH_SERVICES="$APP_CONTENTS/Library/LaunchServices"
 APP_BINARY="$APP_MACOS/$APP_NAME"
+HELPER_NAME="AdminDoctorPrivilegedHelper"
+HELPER_BINARY="$APP_LAUNCH_SERVICES/$HELPER_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 APP_ICON_SOURCE="$ROOT_DIR/Resources/Icons/AdminDoctor.icns"
 ICON_SCRIPT="$ROOT_DIR/script/generate_icons.sh"
@@ -24,18 +27,27 @@ mkdir -p "$DIST_DIR"
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 find "$DIST_DIR" -maxdepth 1 -type d -name "$APP_NAME [0-9]*.app" -prune -exec rm -rf {} +
 find "$DIST_DIR" -maxdepth 1 -type f -name "$APP_NAME [0-9]*.dmg" -delete
+find "$DIST_DIR" -maxdepth 1 -type d -name "AdminDoc*.app" -prune -exec rm -rf {} +
+find "$DIST_DIR" -maxdepth 1 -type f -name "AdminDoc*.dmg" -delete
 
 if [[ ! -f "$APP_ICON_SOURCE" ]]; then
   bash "$ICON_SCRIPT"
 fi
 
 swift build
-BUILD_BINARY="$(swift build --show-bin-path)/$APP_NAME"
+BUILD_DIR="$(swift build --show-bin-path)"
+BUILD_BINARY="$BUILD_DIR/$APP_NAME"
+BUILD_HELPER_BINARY="$BUILD_DIR/$HELPER_NAME"
 
 rm -rf "$APP_BUNDLE"
-mkdir -p "$APP_MACOS" "$APP_RESOURCES"
+mkdir -p "$APP_MACOS" "$APP_RESOURCES" "$APP_LAUNCH_SERVICES"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
+
+if [[ -f "$BUILD_HELPER_BINARY" ]]; then
+  cp "$BUILD_HELPER_BINARY" "$HELPER_BINARY"
+  chmod +x "$HELPER_BINARY"
+fi
 
 if [[ -f "$APP_ICON_SOURCE" ]]; then
   cp "$APP_ICON_SOURCE" "$APP_RESOURCES/AdminDoctor.icns"

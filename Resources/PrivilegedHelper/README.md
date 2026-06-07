@@ -8,6 +8,14 @@ The `AdminDoctorPrivilegedHelper` executable target is a development scaffold fo
 swift run AdminDoctorPrivilegedHelper scan-system-cleanup
 ```
 
+Release bundles copy the helper scaffold to:
+
+```text
+AdminDoctor.app/Contents/Library/LaunchServices/AdminDoctorPrivilegedHelper
+```
+
+The main app reports whether that bundled helper exists, whether a system helper is installed at `/Library/PrivilegedHelperTools/dev.admindoctor.AdminDoctorPrivilegedHelper`, and whether the matching LaunchDaemon plist exists.
+
 Deletion from privileged locations is not implemented here. Before AdminDoctor can safely clean system paths, the helper must be:
 
 - signed with the same Team ID as the app

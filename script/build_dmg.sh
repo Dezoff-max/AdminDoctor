@@ -19,6 +19,8 @@ fi
 mkdir -p "$DIST_DIR"
 find "$DIST_DIR" -maxdepth 1 -type d -name "$APP_NAME [0-9]*.app" -prune -exec rm -rf {} +
 find "$DIST_DIR" -maxdepth 1 -type f -name "$APP_NAME [0-9]*.dmg" -delete
+find "$DIST_DIR" -maxdepth 1 -type d -name "AdminDoc*.app" -prune -exec rm -rf {} +
+find "$DIST_DIR" -maxdepth 1 -type f -name "AdminDoc*.dmg" -delete
 
 bash "$ROOT_DIR/script/build_and_run.sh" --bundle-only
 

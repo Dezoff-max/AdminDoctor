@@ -48,4 +48,26 @@ final class RedactorTests: XCTestCase {
         XCTAssertTrue(json.contains("[redacted-local-ip]"))
         XCTAssertTrue(json.contains("[redacted-ssid]"))
     }
+
+    func testRedactsReportDetailsBeforeHTMLExport() {
+        let result = DiagnosticResult(
+            category: .network,
+            severity: .info,
+            title: "Wi-Fi SSID",
+            summary: "Associated to Office WiFi from 192.168.1.20.",
+            details: [DiagnosticDetail(key: "Wi-Fi SSID", value: "Office WiFi", privacy: .sensitive)],
+            source: "fixture"
+        )
+
+        let html = ReportExporter().html(
+            generatedAt: Date(timeIntervalSince1970: 0),
+            results: [result],
+            context: RedactionContext(wifiSSIDs: ["Office WiFi"])
+        )
+
+        XCTAssertFalse(html.contains("Office WiFi"))
+        XCTAssertFalse(html.contains("192.168.1.20"))
+        XCTAssertTrue(html.contains("[redacted-ssid]"))
+        XCTAssertTrue(html.contains("[redacted-local-ip]"))
+    }
 }

@@ -44,6 +44,7 @@ struct ContentView: View {
                 networkProbeSummary: store.networkProbeSummary,
                 isRunningNetworkProbe: store.isRunningNetworkProbe,
                 networkProbeError: store.networkProbeError,
+                privilegedHelperStatus: store.privilegedHelperStatus,
                 scanCleanup: {
                     Task { await store.scanCleanup() }
                 },
@@ -64,6 +65,21 @@ struct ContentView: View {
                 },
                 traceroute: { host in
                     Task { await store.traceroute(host: host) }
+                },
+                dnsLookup: { host in
+                    Task { await store.dnsLookup(host: host) }
+                },
+                routeTable: {
+                    Task { await store.routeTable() }
+                },
+                captivePortal: {
+                    Task { await store.captivePortal() }
+                },
+                proxyReachability: {
+                    Task { await store.proxyReachability() }
+                },
+                refreshPrivilegedHelperStatus: {
+                    store.refreshPrivilegedHelperStatus()
                 }
             )
         }
@@ -89,6 +105,16 @@ struct ContentView: View {
                         export(.json)
                     }
                     .disabled(store.results.isEmpty)
+
+                    Button(L10n.string("common.html")) {
+                        export(.html)
+                    }
+                    .disabled(store.results.isEmpty)
+
+                    Button(L10n.string("common.pdf")) {
+                        export(.pdf)
+                    }
+                    .disabled(store.results.isEmpty)
                 } label: {
                     Label(L10n.string("diagnostics.export"), systemImage: "square.and.arrow.up")
                 }
@@ -97,6 +123,7 @@ struct ContentView: View {
         }
         .task {
             bringWindowForward()
+            store.refreshPrivilegedHelperStatus()
             try? await Task.sleep(nanoseconds: 500_000_000)
             Task {
                 await store.requestAdminPrivilegesAtLaunch()
@@ -127,6 +154,10 @@ struct ContentView: View {
             panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
         case .json:
             panel.allowedContentTypes = [.json]
+        case .html:
+            panel.allowedContentTypes = [.html]
+        case .pdf:
+            panel.allowedContentTypes = [.pdf]
         }
 
         guard panel.runModal() == .OK, let url = panel.url else {

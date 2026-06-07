@@ -86,6 +86,15 @@ AdminDoctor is a privacy-first macOS diagnostics app for system administrators, 
 - [x] Add user-initiated ping and traceroute tools in Network.
 - [x] Update GitHub Actions checkout to a Node 24-ready action version.
 
+## v0.1.8 - Support Exports And Admin Tools
+
+- [x] Add DNS lookup, route table, captive portal, and proxy reachability tools in Network.
+- [x] Add redacted HTML and PDF report export.
+- [x] Add TCC Full Disk Access and Accessibility inspector signals.
+- [x] Bundle the read-only privileged helper scaffold and show helper install/signature status.
+- [x] Set the default macOS window size to 1089 x 894.
+- [x] Clean legacy AdminDoc build artifacts from local packaging scripts.
+
 ## v0.2.0 - Admin Toolkit Foundation
 
 - [ ] Add a tools sidebar model separate from diagnostic categories.

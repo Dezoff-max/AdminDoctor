@@ -15,6 +15,7 @@ final class DiagnosticStore: ObservableObject {
     @Published private(set) var networkCacheSummary: NetworkCacheFlushSummary?
     @Published private(set) var localNetworkScanSnapshot: LocalNetworkScanSnapshot?
     @Published private(set) var networkProbeSummary: NetworkProbeSummary?
+    @Published private(set) var privilegedHelperStatus: PrivilegedHelperStatus
     @Published private(set) var adminPrivilegeState: AdminPrivilegeState = .notRequested
     @Published private(set) var scanHistory: [ScanHistoryEntry] = []
     @Published var selectedCleanupIDs: Set<UUID> = []
@@ -33,6 +34,7 @@ final class DiagnosticStore: ObservableObject {
     private let networkCacheService: NetworkCacheService
     private let localNetworkScanner: LocalNetworkScanner
     private let networkToolkitService: NetworkToolkitService
+    private let privilegedHelperStatusService: PrivilegedHelperStatusService
     private let adminPrivilegeManager: AdminPrivilegeManager
     private var didRequestLaunchPrivileges = false
     private let scanHistoryLimit = 20
@@ -44,6 +46,7 @@ final class DiagnosticStore: ObservableObject {
         networkCacheService: NetworkCacheService? = nil,
         localNetworkScanner: LocalNetworkScanner? = nil,
         networkToolkitService: NetworkToolkitService? = nil,
+        privilegedHelperStatusService: PrivilegedHelperStatusService? = nil,
         adminPrivilegeManager: AdminPrivilegeManager = AdminPrivilegeManager()
     ) {
         self.runner = runner
@@ -52,8 +55,11 @@ final class DiagnosticStore: ObservableObject {
         self.networkCacheService = networkCacheService ?? NetworkCacheService(runner: runner)
         self.localNetworkScanner = localNetworkScanner ?? LocalNetworkScanner(runner: runner)
         self.networkToolkitService = networkToolkitService ?? NetworkToolkitService(runner: runner)
+        let helperStatusService = privilegedHelperStatusService ?? PrivilegedHelperStatusService(runner: runner)
+        self.privilegedHelperStatusService = helperStatusService
         self.adminPrivilegeManager = adminPrivilegeManager
         self.scanHistory = Self.loadScanHistory(key: scanHistoryDefaultsKey)
+        self.privilegedHelperStatus = helperStatusService.status(bundledToolPath: Self.bundledPrivilegedHelperPath())
     }
 
     func runDiagnostics() async {
@@ -120,6 +126,13 @@ final class DiagnosticStore: ObservableObject {
             try markdown.write(to: url, atomically: true, encoding: .utf8)
         case .json:
             let data = try exporter.jsonData(results: results, context: context)
+            try data.write(to: url, options: [.atomic])
+        case .html:
+            let html = exporter.html(results: results, context: context)
+            try html.write(to: url, atomically: true, encoding: .utf8)
+        case .pdf:
+            let markdown = exporter.markdown(results: results, context: context)
+            let data = PDFReportRenderer.data(markdown: markdown)
             try data.write(to: url, options: [.atomic])
         }
     }
@@ -254,6 +267,26 @@ final class DiagnosticStore: ObservableObject {
         await runNetworkProbe(host: host, kind: .traceroute)
     }
 
+    func dnsLookup(host: String) async {
+        await runNetworkProbe(host: host, kind: .dnsLookup)
+    }
+
+    func routeTable() async {
+        await runNetworkProbe(host: "", kind: .routeTable)
+    }
+
+    func captivePortal() async {
+        await runNetworkProbe(host: "", kind: .captivePortal)
+    }
+
+    func proxyReachability() async {
+        await runNetworkProbe(host: "", kind: .proxyReachability)
+    }
+
+    func refreshPrivilegedHelperStatus() {
+        privilegedHelperStatus = privilegedHelperStatusService.status(bundledToolPath: Self.bundledPrivilegedHelperPath())
+    }
+
     var totalSummary: (fail: Int, warning: Int, pass: Int, info: Int) {
         (
             results.filter { $0.severity == .fail }.count,
@@ -287,6 +320,14 @@ final class DiagnosticStore: ObservableObject {
                     return try service.ping(host: host)
                 case .traceroute:
                     return try service.traceroute(host: host)
+                case .dnsLookup:
+                    return try service.dnsLookup(host: host)
+                case .routeTable:
+                    return try service.routeTable()
+                case .captivePortal:
+                    return try service.captivePortal()
+                case .proxyReachability:
+                    return try service.proxyReachability()
                 }
             }
         }.value
@@ -339,5 +380,14 @@ final class DiagnosticStore: ObservableObject {
         }
 
         return history
+    }
+
+    private static func bundledPrivilegedHelperPath() -> String? {
+        let helperURL = Bundle.main.bundleURL
+            .appendingPathComponent("Contents")
+            .appendingPathComponent("Library")
+            .appendingPathComponent("LaunchServices")
+            .appendingPathComponent(PrivilegedHelperStatusService.helperExecutableName)
+        return helperURL.path
     }
 }

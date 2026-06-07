@@ -43,6 +43,8 @@ AdminDoctor requests administrator authorization at launch through macOS Authori
 
 This does not make the SwiftUI process run as root. Future privileged operations must use explicit, reviewed code paths and should move to a signed privileged helper before touching system-owned state.
 
+The bundled `AdminDoctorPrivilegedHelper` is a read-only scaffold. The app can show whether the helper scaffold is bundled or installed, but it does not install a LaunchDaemon or delete privileged paths in this release.
+
 ## Sensitive Test Data
 
 Use fake fixture values only. Never commit real serial numbers, usernames, hostnames, Wi-Fi SSIDs, local IPs tied to a person or company, tokens, passwords, or customer identifiers.

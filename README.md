@@ -87,13 +87,14 @@ Implemented checks:
 - XProtect and MRT version metadata
 - Software Update security setting signals
 - recent Apple security-related install history
+- TCC Full Disk Access and Accessibility permission signals
 - active network interfaces
 - DNS nameservers
 - default gateway
 - system proxy state
 - Wi-Fi SSID signal when available
 - local LAN scan with ARP discovery, hostname hints, and offline IEEE OUI manufacturer lookup
-- user-initiated network ping and traceroute toolkit
+- user-initiated network ping, DNS lookup, traceroute, route table, captive portal, and proxy reachability toolkit
 - MDM enrollment signal
 - installed configuration profile signal
 - LaunchAgent and LaunchDaemon plist validation and startup item listing
@@ -111,7 +112,8 @@ Safe utility actions:
 - move selected items to Trash for review or restore
 - clear the local DNS cache with `dscacheutil -flushcache`
 - scan the local /24 LAN view and clear displayed LAN scan results
-- run on-demand ping and traceroute checks from the local Mac
+- run on-demand network toolkit checks from the local Mac
+- inspect bundled and installed privileged-helper status for future system cleanup work
 
 Interface helpers:
 
@@ -121,7 +123,7 @@ Interface helpers:
 
 ## Privacy
 
-Markdown and JSON exports are redacted by default. The redactor currently handles:
+Markdown, JSON, HTML, and PDF exports are redacted by default. The redactor currently handles:
 
 - username
 - hostname
@@ -131,7 +133,7 @@ Markdown and JSON exports are redacted by default. The redactor currently handle
 - MAC addresses
 - Wi-Fi SSID when present in diagnostic results
 
-AdminDoctor does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services. LAN manufacturer lookup uses bundled IEEE Registration Authority CSV data and does not make runtime vendor lookup requests.
+AdminDoctor does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services. LAN manufacturer lookup uses bundled IEEE Registration Authority CSV data and does not make runtime vendor lookup requests. Captive portal testing contacts Apple's public probe endpoint only when the user presses the Portal button.
 
 ## Architecture
 
@@ -157,9 +159,9 @@ Key boundaries:
 - `ProcessRunner` rejects shell and sudo executables and runs fixed executable paths with arguments.
 - Administrator authorization state is handled by `AdminPrivilegeManager`.
 - Safe cleanup logic lives in `DiskCleanupService`, only trashes configured non-privileged locations, and marks system cleanup candidates as helper-required.
-- `AdminDoctorPrivilegedHelper` is a read-only scaffold for future signed helper work; privileged deletion is intentionally not implemented yet.
+- `AdminDoctorPrivilegedHelper` is bundled as a read-only scaffold for future signed helper work; privileged deletion is intentionally not implemented yet.
 - Providers are small and independently testable.
-- Report export is handled by `ReportExporter`.
+- Report export is handled by `ReportExporter`, with PDF rendering in the app target.
 
 ## Development
 

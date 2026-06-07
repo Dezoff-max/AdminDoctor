@@ -25,6 +25,7 @@ struct CategoryDetailView: View {
     let networkProbeSummary: NetworkProbeSummary?
     let isRunningNetworkProbe: Bool
     let networkProbeError: String?
+    let privilegedHelperStatus: PrivilegedHelperStatus
     let scanCleanup: () -> Void
     let moveSelectedCleanupItemsToTrash: () -> Void
     let clearDNSCache: () -> Void
@@ -32,6 +33,11 @@ struct CategoryDetailView: View {
     let clearLocalNetworkScan: () -> Void
     let ping: (String) -> Void
     let traceroute: (String) -> Void
+    let dnsLookup: (String) -> Void
+    let routeTable: () -> Void
+    let captivePortal: () -> Void
+    let proxyReachability: () -> Void
+    let refreshPrivilegedHelperStatus: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,6 +54,12 @@ struct CategoryDetailView: View {
 
             List {
                 if category == .storage {
+                    PrivilegedHelperStatusView(
+                        status: privilegedHelperStatus,
+                        refresh: refreshPrivilegedHelperStatus
+                    )
+                    .listRowSeparator(.hidden)
+
                     CleanupReviewView(
                         snapshot: cleanupSnapshot,
                         selectedIDs: $selectedCleanupIDs,
@@ -76,7 +88,11 @@ struct CategoryDetailView: View {
                         isRunning: isRunningNetworkProbe,
                         error: networkProbeError,
                         ping: ping,
-                        traceroute: traceroute
+                        traceroute: traceroute,
+                        dnsLookup: dnsLookup,
+                        routeTable: routeTable,
+                        captivePortal: captivePortal,
+                        proxyReachability: proxyReachability
                     )
                     .listRowSeparator(.hidden)
 

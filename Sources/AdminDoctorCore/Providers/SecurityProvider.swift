@@ -1,3 +1,4 @@
+import ApplicationServices
 import Foundation
 
 public enum SecurityStatusParser {
@@ -191,6 +192,8 @@ public struct SecurityProvider: DiagnosticProvider {
             sipResult(),
             gatekeeperResult(),
             firewallResult(),
+            fullDiskAccessResult(),
+            accessibilityTCCResult(),
             xProtectResult(),
             softwareUpdateSettingsResult(),
             securityInstallHistoryResult()
@@ -258,6 +261,61 @@ public struct SecurityProvider: DiagnosticProvider {
             details: [DiagnosticDetail(key: "Command output", value: raw ?? "Unavailable")],
             remediation: severity == .warning ? "Check whether local firewall configuration matches the organization's baseline." : nil,
             source: "socketfilterfw --getglobalstate"
+        )
+    }
+
+    private func fullDiskAccessResult() -> DiagnosticResult {
+        let homePath = FileManager.default.homeDirectoryForCurrentUser.path
+        let probePaths = [
+            "\(homePath)/Library/Mail",
+            "\(homePath)/Library/Messages",
+            "\(homePath)/Library/Safari",
+            "\(homePath)/Library/Application Support/com.apple.TCC"
+        ]
+        let probes = probePaths.map(protectedPathProbe)
+        let denied = probes.filter { $0.status == .denied }
+        let accessible = probes.filter { $0.status == .accessible }
+        let existing = probes.filter { $0.status != .missing }
+
+        let severity: DiagnosticSeverity
+        let summary: String
+        if !denied.isEmpty {
+            severity = .warning
+            summary = "Full Disk Access appears limited for \(denied.count) protected location(s)."
+        } else if !accessible.isEmpty {
+            severity = .pass
+            summary = "Protected user locations were readable; Full Disk Access signal is present."
+        } else if existing.isEmpty {
+            severity = .info
+            summary = "Protected locations for this account were not found."
+        } else {
+            severity = .info
+            summary = "Full Disk Access signal is inconclusive."
+        }
+
+        return DiagnosticResult(
+            category: .security,
+            severity: severity,
+            title: "TCC Full Disk Access",
+            summary: summary,
+            details: probes.map { probe in
+                DiagnosticDetail(key: probe.label, value: probe.status.displayName, privacy: .sensitive)
+            },
+            remediation: severity == .warning ? "Grant Full Disk Access only if AdminDoctor must inspect protected locations or collect deeper support evidence." : nil,
+            source: "FileManager protected path probes"
+        )
+    }
+
+    private func accessibilityTCCResult() -> DiagnosticResult {
+        let trusted = AXIsProcessTrusted()
+        return DiagnosticResult(
+            category: .security,
+            severity: trusted ? .pass : .info,
+            title: "TCC Accessibility",
+            summary: trusted ? "Accessibility permission is granted." : "Accessibility permission is not granted.",
+            details: [DiagnosticDetail(key: "Trusted", value: trusted ? "Yes" : "No")],
+            remediation: trusted ? nil : "Grant Accessibility only if support workflows require controlled UI inspection.",
+            source: "AXIsProcessTrusted"
         )
     }
 
@@ -415,6 +473,61 @@ public struct SecurityProvider: DiagnosticProvider {
             return "Disabled"
         case .none:
             return "Not reported"
+        }
+    }
+
+    private func protectedPathProbe(_ path: String) -> ProtectedPathProbe {
+        let url = URL(fileURLWithPath: path)
+        let label = url.lastPathComponent
+
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            return ProtectedPathProbe(label: label, path: path, status: .missing)
+        }
+
+        do {
+            _ = try FileManager.default.contentsOfDirectory(atPath: path)
+            return ProtectedPathProbe(label: label, path: path, status: .accessible)
+        } catch {
+            let nsError = error as NSError
+            if nsError.domain == NSCocoaErrorDomain {
+                if nsError.code == NSFileReadNoPermissionError {
+                    return ProtectedPathProbe(label: label, path: path, status: .denied)
+                }
+                if nsError.code == NSFileReadNoSuchFileError {
+                    return ProtectedPathProbe(label: label, path: path, status: .missing)
+                }
+            }
+            if nsError.domain == NSPOSIXErrorDomain, nsError.code == Int(EACCES) || nsError.code == Int(EPERM) {
+                return ProtectedPathProbe(label: label, path: path, status: .denied)
+            }
+            return ProtectedPathProbe(label: label, path: path, status: .unreadable)
+        }
+    }
+}
+
+private struct ProtectedPathProbe: Equatable, Sendable {
+    var label: String
+    var path: String
+    var status: ProtectedPathStatus
+}
+
+private enum ProtectedPathStatus: String, Equatable, Sendable {
+    case accessible
+    case denied
+    case missing
+    case unreadable
+
+    var displayName: String {
+        switch self {
+        case .accessible:
+            return "Readable"
+        case .denied:
+            return "Permission denied"
+        case .missing:
+            return "Not present"
+        case .unreadable:
+            return "Unreadable"
         }
     }
 }

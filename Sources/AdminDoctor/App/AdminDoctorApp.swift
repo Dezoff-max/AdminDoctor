@@ -10,8 +10,9 @@ struct AdminDoctorApp: App {
     var body: some Scene {
         WindowGroup("AdminDoctor") {
             ContentView(store: store)
-                .frame(minWidth: 980, minHeight: 640)
+                .frame(minWidth: 980, idealWidth: 1089, minHeight: 640, idealHeight: 894)
         }
+        .defaultSize(width: 1089, height: 894)
         .commands {
             CommandGroup(after: .newItem) {
                 Button(L10n.string("diagnostics.run.command")) {
