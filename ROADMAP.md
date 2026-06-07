@@ -75,8 +75,8 @@ AdminDoc is a privacy-first macOS diagnostics app for system administrators, hel
 
 ## v0.4.0 - Launchd Inspector
 
-- [ ] Parse launchd labels, program paths, and disabled state.
-- [ ] Detect missing executable paths.
+- [x] Parse launchd labels, program paths, and disabled state.
+- [x] Detect missing executable paths.
 - [ ] Detect duplicate labels across LaunchAgents and LaunchDaemons.
 - [ ] Add launchd fixtures for valid, invalid, and broken plists.
 - [ ] Add filtering by system, local admin, and current user paths.

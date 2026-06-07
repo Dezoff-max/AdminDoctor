@@ -22,6 +22,8 @@
 "cleanup.confirm.title" = "Переместить выбранные объекты очистки в Корзину?";
 "cleanup.empty.found" = "Кандидаты для очистки не найдены.";
 "cleanup.empty.notRun" = "Сканирование очистки еще не запускалось.";
+"cleanup.failures.more" = "Еще ошибок: %d.";
+"cleanup.failures.title" = "Ошибки очистки: %d";
 "cleanup.group.cargo" = "Кэш Cargo";
 "cleanup.group.clear" = "Сбросить группу";
 "cleanup.group.gradle" = "Кэш Gradle";
@@ -34,6 +36,7 @@
 "cleanup.group.swiftpm" = "Кэш SwiftPM";
 "cleanup.group.xcode" = "Кэш Xcode и симуляторов";
 "cleanup.helper.help" = "Этот объект находится в системной области и требует подписанный privileged helper перед очисткой через AdminDoc.";
+"cleanup.helper.notice" = "Системные объекты очистки сейчас показываются только для проверки. Встроенный helper пока является read-only заготовкой для разработки; привилегированное удаление в этой сборке не установлено.";
 "cleanup.kind.downloadedInstaller" = "Загруженный установщик";
 "cleanup.kind.appContainerCache" = "Кэш контейнера приложения";
 "cleanup.kind.developerCache" = "Кэш разработки";
@@ -46,6 +49,7 @@
 "cleanup.noSelection" = "Объекты очистки не выбраны.";
 "cleanup.notice.failedOnly" = "Ничего не перемещено. Ошибок: %d.";
 "cleanup.notice.mixed" = "Перемещено в Корзину: %d, ошибок: %d.";
+"cleanup.notice.recreated" = "Некоторые перемещенные объекты были пересозданы macOS или работающей службой и снова видны после повторного сканирования.";
 "cleanup.notice.trashed" = "Перемещено в Корзину: %d, выбрано %@.";
 "cleanup.reason.downloadedInstaller" = "Загруженный установщик или архив";
 "cleanup.reason.appContainerCache" = "Объект кэша контейнера приложения";

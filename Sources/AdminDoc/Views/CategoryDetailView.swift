@@ -14,6 +14,7 @@ struct CategoryDetailView: View {
     let isCleaning: Bool
     let cleanupError: String?
     let cleanupNotice: String?
+    let cleanupFailures: [CleanupFailure]
     let networkCacheSummary: NetworkCacheFlushSummary?
     let isClearingDNSCache: Bool
     let networkCacheError: String?
@@ -42,6 +43,7 @@ struct CategoryDetailView: View {
                         isCleaning: isCleaning,
                         error: cleanupError,
                         notice: cleanupNotice,
+                        failures: cleanupFailures,
                         scan: scanCleanup,
                         clean: moveSelectedCleanupItemsToTrash
                     )

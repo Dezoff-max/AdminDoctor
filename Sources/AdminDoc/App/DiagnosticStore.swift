@@ -16,6 +16,7 @@ final class DiagnosticStore: ObservableObject {
     @Published var exportError: String?
     @Published var cleanupError: String?
     @Published var cleanupNotice: String?
+    @Published var cleanupFailures: [CleanupFailure] = []
     @Published var networkCacheError: String?
 
     private let runner: any CommandRunning
@@ -113,6 +114,7 @@ final class DiagnosticStore: ObservableObject {
         cleanupError = nil
         if clearNotice {
             cleanupNotice = nil
+            cleanupFailures = []
         }
 
         let service = cleanupService
@@ -148,16 +150,29 @@ final class DiagnosticStore: ObservableObject {
         isCleaning = true
         cleanupError = nil
         cleanupNotice = nil
+        cleanupFailures = []
 
         let service = cleanupService
         let summary = await Task.detached(priority: .userInitiated) {
             service.moveToTrash(selectedCandidates)
         }.value
 
+        let trashedPaths = Set(summary.trashed.map(\.path))
         selectedCleanupIDs.removeAll()
         cleanupNotice = cleanupNotice(for: summary)
+        cleanupFailures = summary.failures
         isCleaning = false
         await scanCleanup(clearNotice: false)
+
+        if
+            !trashedPaths.isEmpty,
+            let cleanupSnapshot,
+            cleanupSnapshot.candidates.contains(where: { trashedPaths.contains($0.path) })
+        {
+            cleanupNotice = [cleanupNotice, L10n.string("cleanup.notice.recreated")]
+                .compactMap { $0 }
+                .joined(separator: "\n")
+        }
     }
 
     func clearDNSCache() async {

@@ -32,6 +32,7 @@ struct ContentView: View {
                 isCleaning: store.isCleaning,
                 cleanupError: store.cleanupError,
                 cleanupNotice: store.cleanupNotice,
+                cleanupFailures: store.cleanupFailures,
                 networkCacheSummary: store.networkCacheSummary,
                 isClearingDNSCache: store.isClearingDNSCache,
                 networkCacheError: store.networkCacheError,

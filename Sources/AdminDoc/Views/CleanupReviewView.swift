@@ -8,6 +8,7 @@ struct CleanupReviewView: View {
     let isCleaning: Bool
     let error: String?
     let notice: String?
+    let failures: [CleanupFailure]
     let scan: () -> Void
     let clean: () -> Void
 
@@ -23,6 +24,10 @@ struct CleanupReviewView: View {
 
     private var selectedBytes: Int64 {
         selectedCandidates.reduce(0) { $0 + $1.byteCount }
+    }
+
+    private var hasHelperRequiredCandidates: Bool {
+        candidates.contains { $0.requiresPrivilegedHelper }
     }
 
     private var candidateGroups: [CleanupCandidateGroup] {
@@ -105,6 +110,10 @@ struct CleanupReviewView: View {
                     .textSelection(.enabled)
             }
 
+            if !failures.isEmpty {
+                CleanupFailuresView(failures: failures)
+            }
+
             if candidates.isEmpty {
                 Text(snapshot == nil ? L10n.string("cleanup.empty.notRun") : L10n.string("cleanup.empty.found"))
                     .font(.callout)
@@ -126,6 +135,10 @@ struct CleanupReviewView: View {
                     Text(L10n.format("cleanup.selectedSummary", selectedCandidates.count, ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file)))
                         .font(.callout)
                         .foregroundStyle(.secondary)
+                }
+
+                if hasHelperRequiredCandidates {
+                    HelperRequiredNotice()
                 }
 
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -161,6 +174,55 @@ struct CleanupReviewView: View {
 
     private func selectRecommendedCandidates() {
         selectedIDs = Set(candidates.filter { $0.defaultSelected && !$0.requiresPrivilegedHelper }.map(\.id))
+    }
+}
+
+private struct CleanupFailuresView: View {
+    let failures: [CleanupFailure]
+
+    var body: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(failures.prefix(8), id: \.path) { failure in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(displayCleanupPath(failure.path))
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                        Text(failure.message)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
+
+                if failures.count > 8 {
+                    Text(L10n.format("cleanup.failures.more", failures.count - 8))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.top, 6)
+        } label: {
+            Label(L10n.format("cleanup.failures.title", failures.count), systemImage: "exclamationmark.triangle")
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.orange)
+        }
+    }
+}
+
+private struct HelperRequiredNotice: View {
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "lock.shield")
+                .foregroundStyle(.secondary)
+            Text(L10n.string("cleanup.helper.notice"))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(.tertiary.opacity(0.35), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
 

@@ -86,7 +86,7 @@ Implemented checks:
 - Wi-Fi SSID signal when available
 - MDM enrollment signal
 - installed configuration profile signal
-- LaunchAgent and LaunchDaemon plist validation
+- LaunchAgent and LaunchDaemon plist validation and startup item listing
 - explicit MVP log collection policy
 
 Safe utility actions:
