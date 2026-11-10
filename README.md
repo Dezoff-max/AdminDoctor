@@ -15,35 +15,21 @@ English:
 
 1. Download `AdminDoctor.dmg` from the latest GitHub Release.
 2. Open the DMG and drag `AdminDoctor.app` to Applications.
-3. If macOS blocks this unsigned build, prefer Control-clicking `AdminDoctor.app`, choosing **Open**, then confirming **Open**.
-4. Internal/testing workaround only: if your organization allows temporarily disabling Gatekeeper, run:
+3. If macOS blocks this unsigned build, allow only this app instead of turning Gatekeeper off:
+   - macOS 15 and later: try to open `AdminDoctor.app` once, then go to **System Settings → Privacy & Security**, scroll to **Security**, and click **Open Anyway** next to the AdminDoctor message.
+   - macOS 13 and 14: Control-click `AdminDoctor.app`, choose **Open**, then confirm **Open**.
 
-```sh
-sudo spctl --master-disable
-```
-
-Open AdminDoctor, then re-enable Gatekeeper immediately:
-
-```sh
-sudo spctl --master-enable
-```
+Do not disable Gatekeeper system-wide to run AdminDoctor.
 
 Русский:
 
 1. Скачайте `AdminDoctor.dmg` из последнего GitHub Release.
 2. Откройте DMG и перетащите `AdminDoctor.app` в папку «Программы».
-3. Если macOS блокирует неподписанную сборку, сначала используйте более безопасный вариант: Control-click / правый клик по `AdminDoctor.app`, выберите **Открыть**, затем подтвердите **Открыть**.
-4. Только для внутреннего тестирования: если политика вашей организации разрешает временно отключить Gatekeeper, выполните:
+3. Если macOS блокирует неподписанную сборку, разрешите запуск только этого приложения, не отключая Gatekeeper:
+   - macOS 15 и новее: попробуйте открыть `AdminDoctor.app` один раз, затем откройте **Системные настройки → Конфиденциальность и безопасность**, прокрутите до раздела **Безопасность** и нажмите **Всё равно открыть** рядом с сообщением об AdminDoctor.
+   - macOS 13 и 14: Control-click / правый клик по `AdminDoctor.app`, выберите **Открыть**, затем подтвердите **Открыть**.
 
-```sh
-sudo spctl --master-disable
-```
-
-Откройте AdminDoctor, затем сразу включите Gatekeeper обратно:
-
-```sh
-sudo spctl --master-enable
-```
+Не отключайте Gatekeeper для всей системы ради запуска AdminDoctor.
 
 ## Principles
 
@@ -166,7 +152,7 @@ Key boundaries:
 - SwiftUI views live in `Sources/AdminDoctor`.
 - Diagnostic logic lives in `Sources/AdminDoctorCore`.
 - Command execution goes through `CommandRunning`.
-- `ProcessRunner` rejects shell and sudo executables and runs fixed executable paths with arguments.
+- `ProcessRunner` launches only executables on its explicit allow-list (`ProcessRunner.defaultAllowedExecutables`) and runs them by fixed path with arguments; shells, interpreters, and `sudo` are not on it.
 - Safe cleanup logic lives in `DiskCleanupService`, only trashes configured non-privileged locations, and marks system cleanup candidates as helper-required.
 - `PrivilegedCleanupService` restricts helper actions to allow-listed system cleanup candidates, supports dry-run plans, moves eligible items to the root-only `/Library/Application Support/AdminDoctor/Quarantine`, and writes audit events to `/Library/Logs/AdminDoctor/privileged-helper-audit.jsonl`.
 - `AdminDoctorPrivilegedHelper` is bundled with a launchd plist, `SMAppService` registration flow, and a privileged XPC contract for status, dry-run, and quarantine helper checks. It accepts XPC connections only from the AdminDoctor app signed by the same team as the helper, and refuses all connections when it is unsigned or ad-hoc signed.

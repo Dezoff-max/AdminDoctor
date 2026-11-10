@@ -6,6 +6,7 @@ Thanks for helping improve AdminDoctor.
 
 - Keep diagnostics read-only unless a future roadmap item explicitly changes that.
 - Do not add sudo prompts to MVP checks.
+- A new command-line tool must be added to `ProcessRunner.defaultAllowedExecutables`; never add shells, interpreters, `env`, `osascript`, or `sudo`.
 - Do not add telemetry, analytics, or network upload.
 - Redact sensitive values in exports by default.
 - Prefer structured parsing over string scraping when macOS provides structured output.
