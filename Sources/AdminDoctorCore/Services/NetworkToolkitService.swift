@@ -344,6 +344,8 @@ public final class NetworkToolkitService: @unchecked Sendable {
         guard
             !host.isEmpty,
             host.count <= 253,
+            // A leading hyphen would be parsed as an option by ping/traceroute.
+            !host.hasPrefix("-"),
             host.range(of: #"^[A-Za-z0-9.:\-]+$"#, options: .regularExpression) != nil
         else {
             throw NetworkToolkitError.invalidHost

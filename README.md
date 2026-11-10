@@ -49,7 +49,7 @@ sudo spctl --master-enable
 
 - Diagnostics are read-only.
 - Cleanup actions are explicit, scoped, and move items to Trash instead of permanently deleting them.
-- The app requests administrator authorization at launch for admin utility actions.
+- The app never asks for an administrator password at launch; privileged work goes only through the signed helper, which macOS approves separately.
 - No shell `sudo` execution.
 - No telemetry or network upload.
 - All diagnostics run locally.
@@ -143,7 +143,7 @@ Markdown, JSON, HTML, and PDF exports are redacted by default. The redactor curr
 - MAC addresses
 - Wi-Fi SSID when present in diagnostic results
 
-AdminDoctor does not upload reports, phone home, or collect analytics. Administrator authorization is requested locally through macOS Authorization Services and kept only for the current app session. Cleanup tools do not scan arbitrary paths or change network services. LAN manufacturer lookup uses bundled IEEE Registration Authority CSV data and does not make runtime vendor lookup requests. Bonjour/mDNS name hints and port probes stay on the local network. Captive portal testing and external IP lookup contact external endpoints only when the user presses those buttons.
+AdminDoctor does not upload reports, phone home, or collect analytics. The app does not request or hold administrator authorization. Cleanup tools do not scan arbitrary paths or change network services. LAN manufacturer lookup uses bundled IEEE Registration Authority CSV data and does not make runtime vendor lookup requests. Bonjour/mDNS name hints and port probes stay on the local network. Captive portal testing and external IP lookup contact external endpoints only when the user presses those buttons.
 
 ## Architecture
 
@@ -167,10 +167,9 @@ Key boundaries:
 - Diagnostic logic lives in `Sources/AdminDoctorCore`.
 - Command execution goes through `CommandRunning`.
 - `ProcessRunner` rejects shell and sudo executables and runs fixed executable paths with arguments.
-- Administrator authorization state is handled by `AdminPrivilegeManager`.
 - Safe cleanup logic lives in `DiskCleanupService`, only trashes configured non-privileged locations, and marks system cleanup candidates as helper-required.
-- `PrivilegedCleanupService` restricts helper actions to allow-listed system cleanup candidates, supports dry-run plans, moves eligible items to `/Users/Shared/AdminDoctor/PrivilegedCleanup`, and writes audit events to `/Library/Logs/AdminDoctor/privileged-helper-audit.jsonl`.
-- `AdminDoctorPrivilegedHelper` is bundled with a launchd plist, `SMAppService` registration flow, and a privileged XPC contract for status, dry-run, and quarantine helper checks.
+- `PrivilegedCleanupService` restricts helper actions to allow-listed system cleanup candidates, supports dry-run plans, moves eligible items to the root-only `/Library/Application Support/AdminDoctor/Quarantine`, and writes audit events to `/Library/Logs/AdminDoctor/privileged-helper-audit.jsonl`.
+- `AdminDoctorPrivilegedHelper` is bundled with a launchd plist, `SMAppService` registration flow, and a privileged XPC contract for status, dry-run, and quarantine helper checks. It accepts XPC connections only from the AdminDoctor app signed by the same team as the helper, and refuses all connections when it is unsigned or ad-hoc signed.
 - Providers are small and independently testable.
 - Report export is handled by `ReportExporter`, with PDF rendering in the app target.
 

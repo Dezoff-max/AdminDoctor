@@ -1,5 +1,6 @@
 import AdminDoctorCore
 import Foundation
+import Security
 
 let helperVersionString = "0.1.0"
 let arguments = Array(CommandLine.arguments.dropFirst())
@@ -88,10 +89,47 @@ final class AdminDoctorPrivilegedHelperService: NSObject, AdminDoctorPrivilegedH
     }
 }
 
+/// Team identifier from the helper's own code signature, or nil for unsigned and ad-hoc builds.
+func helperTeamIdentifier() -> String? {
+    var code: SecCode?
+    guard SecCodeCopySelf(SecCSFlags(), &code) == errSecSuccess, let code else {
+        return nil
+    }
+
+    var staticCode: SecStaticCode?
+    guard SecCodeCopyStaticCode(code, SecCSFlags(), &staticCode) == errSecSuccess, let staticCode else {
+        return nil
+    }
+
+    var information: CFDictionary?
+    let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
+    guard
+        SecCodeCopySigningInformation(staticCode, flags, &information) == errSecSuccess,
+        let values = information as? [String: Any]
+    else {
+        return nil
+    }
+
+    return values[kSecCodeInfoTeamIdentifier as String] as? String
+}
+
 final class AdminDoctorPrivilegedHelperDelegate: NSObject, NSXPCListenerDelegate {
     private let service = AdminDoctorPrivilegedHelperService()
+    private let clientRequirement = PrivilegedHelperXPCContract.clientCodeSigningRequirement(
+        teamIdentifier: helperTeamIdentifier()
+    )
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
+        // The helper runs as root, so only the AdminDoctor app signed by the same
+        // team may talk to it. Without a team-signed helper nothing is accepted.
+        guard let clientRequirement else {
+            writeLine("Rejected XPC connection: helper has no team code signature.", to: .standardError)
+            return false
+        }
+        // The system invalidates the connection when a message arrives from a
+        // process that does not satisfy the requirement.
+        connection.setCodeSigningRequirement(clientRequirement)
+
         connection.exportedInterface = NSXPCInterface(with: AdminDoctorPrivilegedHelperXPC.self)
         connection.exportedObject = service
         connection.resume()

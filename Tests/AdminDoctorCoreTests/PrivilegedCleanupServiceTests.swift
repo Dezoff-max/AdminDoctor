@@ -48,6 +48,102 @@ final class PrivilegedCleanupServiceTests: XCTestCase {
         XCTAssertTrue((try String(contentsOf: audit)).contains("\"result\":\"moved\""))
     }
 
+    func testQuarantineCreatesOwnerOnlyDirectories() throws {
+        let root = temporaryRoot()
+        let cache = root.appendingPathComponent("Library/Caches", isDirectory: true)
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        let candidate = cache.appendingPathComponent("com.example.cache")
+        try Data("cache".utf8).write(to: candidate)
+
+        let quarantineBase = root.appendingPathComponent("quarantine", isDirectory: true)
+        let service = PrivilegedCleanupService(
+            scopes: [testScope(cache)],
+            quarantineBase: quarantineBase,
+            auditLogURL: root.appendingPathComponent("audit.jsonl"),
+            now: { Date(timeIntervalSince1970: 100) }
+        )
+
+        let result = service.quarantine(paths: [candidate.path])
+
+        XCTAssertTrue(result.failures.isEmpty)
+        for path in [quarantineBase.path, result.quarantineRoot] {
+            let attributes = try FileManager.default.attributesOfItem(atPath: path)
+            XCTAssertEqual((attributes[.posixPermissions] as? NSNumber)?.intValue, 0o700)
+        }
+    }
+
+    func testQuarantineRefusesSymbolicLinkQuarantineBase() throws {
+        let root = temporaryRoot()
+        let cache = root.appendingPathComponent("Library/Caches", isDirectory: true)
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        let candidate = cache.appendingPathComponent("com.example.cache")
+        try Data("cache".utf8).write(to: candidate)
+
+        let redirected = root.appendingPathComponent("elsewhere", isDirectory: true)
+        try FileManager.default.createDirectory(at: redirected, withIntermediateDirectories: true)
+        let quarantineBase = root.appendingPathComponent("quarantine", isDirectory: true)
+        try FileManager.default.createSymbolicLink(at: quarantineBase, withDestinationURL: redirected)
+
+        let service = PrivilegedCleanupService(
+            scopes: [testScope(cache)],
+            quarantineBase: quarantineBase,
+            auditLogURL: root.appendingPathComponent("audit.jsonl"),
+            now: { Date(timeIntervalSince1970: 100) }
+        )
+
+        let result = service.quarantine(paths: [candidate.path])
+
+        XCTAssertTrue(result.moved.isEmpty)
+        XCTAssertFalse(result.failures.isEmpty)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: candidate.path))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: redirected.path), [])
+    }
+
+    func testQuarantineRefusesWorldWritableQuarantineBase() throws {
+        let root = temporaryRoot()
+        let cache = root.appendingPathComponent("Library/Caches", isDirectory: true)
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        let candidate = cache.appendingPathComponent("com.example.cache")
+        try Data("cache".utf8).write(to: candidate)
+
+        let container = root.appendingPathComponent("shared", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: container,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o777]
+        )
+        // createDirectory applies the umask, so set the mode explicitly.
+        try FileManager.default.setAttributes([.posixPermissions: 0o777], ofItemAtPath: container.path)
+
+        let service = PrivilegedCleanupService(
+            scopes: [testScope(cache)],
+            quarantineBase: container.appendingPathComponent("quarantine", isDirectory: true),
+            auditLogURL: root.appendingPathComponent("audit.jsonl"),
+            now: { Date(timeIntervalSince1970: 100) }
+        )
+
+        let result = service.quarantine(paths: [candidate.path])
+
+        XCTAssertTrue(result.moved.isEmpty)
+        XCTAssertFalse(result.failures.isEmpty)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: candidate.path))
+    }
+
+    func testClientRequirementPinsBundleIdentifierAndTeam() {
+        let requirement = PrivilegedHelperXPCContract.clientCodeSigningRequirement(teamIdentifier: "ABCDE12345")
+
+        XCTAssertEqual(
+            requirement,
+            "anchor apple generic and identifier \"dev.admindoctor.AdminDoctor\" and certificate leaf[subject.OU] = \"ABCDE12345\""
+        )
+    }
+
+    func testClientRequirementIsUnavailableWithoutValidTeam() {
+        XCTAssertNil(PrivilegedHelperXPCContract.clientCodeSigningRequirement(teamIdentifier: nil))
+        XCTAssertNil(PrivilegedHelperXPCContract.clientCodeSigningRequirement(teamIdentifier: ""))
+        XCTAssertNil(PrivilegedHelperXPCContract.clientCodeSigningRequirement(teamIdentifier: "TEAM\" or anchor apple"))
+    }
+
     private func testScope(_ root: URL) -> CleanupScope {
         CleanupScope(
             root: root,

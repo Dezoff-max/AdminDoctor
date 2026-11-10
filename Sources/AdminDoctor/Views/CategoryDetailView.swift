@@ -8,7 +8,6 @@ struct CategoryDetailView: View {
     let lastRunDate: Date?
     let totalSummary: (fail: Int, warning: Int, pass: Int, info: Int)
     let resourceMetrics: [ResourceMetric]
-    let adminPrivilegeState: AdminPrivilegeState
     let cleanupSnapshot: CleanupSnapshot?
     @Binding var selectedCleanupIDs: Set<UUID>
     let isScanningCleanup: Bool
@@ -58,8 +57,7 @@ struct CategoryDetailView: View {
                 isRunning: isRunning,
                 lastRunDate: lastRunDate,
                 totalSummary: totalSummary,
-                resourceMetrics: resourceMetrics,
-                adminPrivilegeState: adminPrivilegeState
+                resourceMetrics: resourceMetrics
             )
 
             Divider()
@@ -152,7 +150,6 @@ private struct HeaderView: View {
     let lastRunDate: Date?
     let totalSummary: (fail: Int, warning: Int, pass: Int, info: Int)
     let resourceMetrics: [ResourceMetric]
-    let adminPrivilegeState: AdminPrivilegeState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -160,7 +157,6 @@ private struct HeaderView: View {
                 Label(category.localizedTitle, systemImage: category.symbolName)
                     .font(.title2.weight(.semibold))
                 Spacer()
-                AdminPrivilegePill(state: adminPrivilegeState)
                 Text(statusText)
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -260,38 +256,6 @@ private struct ResourceMetricTile: View {
             return .orange
         case .network:
             return .green
-        }
-    }
-}
-
-private struct AdminPrivilegePill: View {
-    let state: AdminPrivilegeState
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Circle()
-                .fill(color)
-                .frame(width: 7, height: 7)
-            Text(state.status.localizedTitle)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 5)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .help(state.status.localizedMessage)
-    }
-
-    private var color: Color {
-        switch state.status {
-        case .authorized:
-            return .green
-        case .requesting:
-            return .blue
-        case .denied, .canceled, .unavailable:
-            return .orange
-        case .notRequested:
-            return .secondary
         }
     }
 }

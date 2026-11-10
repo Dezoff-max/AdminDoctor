@@ -28,7 +28,6 @@ struct ContentView: View {
                 lastRunDate: store.lastRunDate,
                 totalSummary: store.totalSummary,
                 resourceMetrics: store.resourceMetrics,
-                adminPrivilegeState: store.adminPrivilegeState,
                 cleanupSnapshot: store.cleanupSnapshot,
                 selectedCleanupIDs: $store.selectedCleanupIDs,
                 isScanningCleanup: store.isScanningCleanup,
@@ -152,9 +151,6 @@ struct ContentView: View {
             bringWindowForward()
             store.refreshPrivilegedHelperStatus()
             try? await Task.sleep(nanoseconds: 500_000_000)
-            Task {
-                await store.requestAdminPrivilegesAtLaunch()
-            }
             bringWindowForward()
             if store.results.isEmpty {
                 await store.runDiagnostics()
