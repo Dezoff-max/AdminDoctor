@@ -38,7 +38,7 @@ public enum CommandRunnerError: Error, Equatable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .unsafeExecutable(let executable):
-            return "Unsafe executable is not allowed: \(executable)"
+            return "Executable is not on the allow-list: \(executable)"
         case .launchFailed(let message):
             return "Command launch failed: \(message)"
         case .timedOut(let command):
@@ -52,15 +52,43 @@ public protocol CommandRunning: Sendable {
 }
 
 public final class ProcessRunner: CommandRunning, @unchecked Sendable {
-    private let deniedExecutables: Set<String> = [
-        "/bin/bash",
-        "/bin/sh",
-        "/bin/zsh",
-        "/usr/bin/osascript",
-        "/usr/bin/sudo"
+    /// Every executable AdminDoctor is allowed to launch. Anything else is refused,
+    /// so a new tool has to be added here deliberately and shows up in review.
+    /// Shells, interpreters, `env`, `osascript`, and `sudo` must never be listed.
+    public static let defaultAllowedExecutables: Set<String> = [
+        "/bin/ps",
+        "/sbin/ifconfig",
+        "/sbin/ping",
+        "/sbin/route",
+        "/usr/bin/codesign",
+        "/usr/bin/csrutil",
+        "/usr/bin/curl",
+        "/usr/bin/dig",
+        "/usr/bin/dscacheutil",
+        "/usr/bin/fdesetup",
+        "/usr/bin/nc",
+        "/usr/bin/profiles",
+        "/usr/bin/sw_vers",
+        "/usr/bin/uname",
+        "/usr/bin/vm_stat",
+        "/usr/libexec/ApplicationFirewall/socketfilterfw",
+        "/usr/sbin/arp",
+        "/usr/sbin/diskutil",
+        "/usr/sbin/ioreg",
+        "/usr/sbin/netstat",
+        "/usr/sbin/networksetup",
+        "/usr/sbin/scutil",
+        "/usr/sbin/spctl",
+        "/usr/sbin/sysctl",
+        "/usr/sbin/system_profiler",
+        "/usr/sbin/traceroute"
     ]
 
-    public init() {}
+    private let allowedExecutables: Set<String>
+
+    public init(allowedExecutables: Set<String> = ProcessRunner.defaultAllowedExecutables) {
+        self.allowedExecutables = allowedExecutables
+    }
 
     public func run(_ command: Command) throws -> CommandResult {
         try validate(command)
@@ -120,11 +148,9 @@ public final class ProcessRunner: CommandRunning, @unchecked Sendable {
     }
 
     private func validate(_ command: Command) throws {
-        guard command.executable.hasPrefix("/") else {
-            throw CommandRunnerError.unsafeExecutable(command.executable)
-        }
-
-        guard !deniedExecutables.contains(command.executable) else {
+        // Exact match only: relative paths and spellings such as
+        // "/usr/bin/../../bin/sh" are not in the list and are refused.
+        guard allowedExecutables.contains(command.executable) else {
             throw CommandRunnerError.unsafeExecutable(command.executable)
         }
     }
