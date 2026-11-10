@@ -14,6 +14,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.3
+        with:
+          # Full history and tags: the bundle version comes from the nearest tag.
+          fetch-depth: 0
 
       - name: Show Swift version
         run: swift --version
@@ -23,3 +26,42 @@ jobs:
 
       - name: Test
         run: swift test
+
+      - name: Build app bundle
+        run: ./script/build_and_run.sh --bundle-only
+
+      - name: Verify app bundle
+        run: |
+          set -euo pipefail
+          APP=dist/AdminDoctor.app
+          PLIST="$APP/Contents/Info.plist"
+          print_key() { /usr/libexec/PlistBuddy -c "Print :$1" "$PLIST"; }
+
+          plutil -lint "$PLIST"
+          VERSION="$(print_key CFBundleShortVersionString)"
+          BUILD="$(print_key CFBundleVersion)"
+          echo "Bundle version $VERSION ($BUILD)"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$VERSION" != "0.0.0" ]]
+          [[ "$BUILD" =~ ^[0-9]+$ ]]
+          [[ -n "$(print_key NSLocalNetworkUsageDescription)" ]]
+
+          test -x "$APP/Contents/MacOS/AdminDoctor"
+          test -x "$APP/Contents/Library/LaunchServices/AdminDoctorPrivilegedHelper"
+          plutil -lint "$APP/Contents/Library/LaunchDaemons/dev.admindoctor.AdminDoctorPrivilegedHelper.plist"
+          for language in en ru; do
+            plutil -lint "$APP/Contents/Resources/$language.lproj/InfoPlist.strings"
+            plutil -lint "$APP/Contents/Resources/$language.lproj/Localizable.strings"
+          done
+
+      - name: Launch smoke test
+        run: |
+          set -euo pipefail
+          open -n dist/AdminDoctor.app
+          sleep 10
+          if ! pgrep -x AdminDoctor >/dev/null; then
+            echo "AdminDoctor is not running 10 seconds after launch." >&2
+            log show --last 1m --style compact --predicate 'process == "AdminDoctor"' | tail -50 || true
+            exit 1
+          fi
+          pkill -x AdminDoctor
