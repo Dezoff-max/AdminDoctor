@@ -54,8 +54,10 @@ if [[ ! -f "$APP_ICON_SOURCE" ]]; then
   bash "$ICON_SCRIPT"
 fi
 
-swift build
-BUILD_DIR="$(swift build --show-bin-path)"
+# BUILD_CONFIGURATION=release is used for distributed builds; debug is the default.
+BUILD_CONFIGURATION="${BUILD_CONFIGURATION:-debug}"
+swift build -c "$BUILD_CONFIGURATION"
+BUILD_DIR="$(swift build -c "$BUILD_CONFIGURATION" --show-bin-path)"
 BUILD_BINARY="$BUILD_DIR/$APP_NAME"
 BUILD_HELPER_BINARY="$BUILD_DIR/$HELPER_NAME"
 
@@ -76,6 +78,10 @@ fi
 if [[ -f "$APP_ICON_SOURCE" ]]; then
   cp "$APP_ICON_SOURCE" "$APP_RESOURCES/AdminDoctor.icns"
 fi
+
+# SwiftPM resource bundles (for example the offline OUI vendor data). Without them
+# the app only works on the Mac that built it.
+find "$BUILD_DIR" -maxdepth 1 -type d -name "*.bundle" -exec cp -R {} "$APP_RESOURCES/" \;
 
 if [[ -d "$LOCALIZATION_ROOT" ]]; then
   find "$LOCALIZATION_ROOT" -maxdepth 1 -type d -name "*.lproj" -exec cp -R {} "$APP_RESOURCES/" \;

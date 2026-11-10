@@ -2,7 +2,7 @@ import AdminDoctorCore
 import Foundation
 import Security
 
-let helperVersionString = "0.1.0"
+let helperVersionString = "0.1.11"
 let arguments = Array(CommandLine.arguments.dropFirst())
 let command = arguments.first ?? "xpc"
 

@@ -118,11 +118,29 @@ struct OUIVendorDatabase: Sendable {
         return rows
     }
 
+    static let resourceBundleName = "AdminDoctor_AdminDoctorCore.bundle"
+
+    /// Finds the SwiftPM resource bundle. Inside the packaged app it is copied to
+    /// Contents/Resources; `Bundle.module` alone only checks the app root and the
+    /// build directory of the machine that compiled it, and traps when both are
+    /// missing, which is what happens on every Mac except the build machine.
+    static func resourceBundle(mainBundle: Bundle = .main) -> Bundle {
+        if
+            let url = mainBundle.resourceURL?.appendingPathComponent(resourceBundleName, isDirectory: true),
+            let bundle = Bundle(url: url)
+        {
+            return bundle
+        }
+
+        return Bundle.module
+    }
+
     private static func loadBundled() -> OUIVendorDatabase {
         var vendors: [String: String] = [:]
+        let bundle = resourceBundle()
         for resourceName in ["oui", "mam", "oui36"] {
             guard
-                let url = Bundle.module.url(forResource: resourceName, withExtension: "csv"),
+                let url = bundle.url(forResource: resourceName, withExtension: "csv"),
                 let data = try? Data(contentsOf: url)
             else {
                 continue

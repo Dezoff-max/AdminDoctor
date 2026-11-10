@@ -197,7 +197,9 @@ CODE_SIGN_IDENTITY="Developer ID Application: Example Team (TEAMID)" ./script/bu
 
 Without a valid local code-signing identity the app still builds and runs, but the helper is ad-hoc signed and cannot be treated as a production signed privileged helper by macOS.
 
-Signed and notarized releases use `.github/workflows/release.yml`. Configure these GitHub Secrets before pushing a `v*` tag or running the workflow manually:
+Releases are built by `.github/workflows/release.yml` in the release configuration. Push a `v*` tag, or run the workflow manually with a `tag` input such as `v0.1.11`; it builds the DMG, verifies it, and publishes a GitHub Release with notes from `Docs/ReleaseNotes/<tag>.md` when that file exists. Running it manually without a tag only builds the DMG as a workflow artifact.
+
+Without signing secrets the workflow publishes an unsigned DMG and says so in the release notes. For signed and notarized releases, configure these GitHub Secrets:
 
 - `MACOS_CERTIFICATE_P12_BASE64`
 - `MACOS_CERTIFICATE_PASSWORD`
