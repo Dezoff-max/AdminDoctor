@@ -1,15 +1,3 @@
-"admin.message.authorized" = "Administrator privileges are authorized for this app session.";
-"admin.message.canceled" = "Administrator authorization was canceled.";
-"admin.message.denied" = "Administrator authorization was denied.";
-"admin.message.notRequested" = "Admin privileges have not been requested.";
-"admin.message.requesting" = "Requesting administrator privileges...";
-"admin.message.unavailable" = "Administrator authorization is unavailable.";
-"admin.status.authorized" = "Admin authorized";
-"admin.status.canceled" = "Admin canceled";
-"admin.status.denied" = "Admin denied";
-"admin.status.notRequested" = "Admin not requested";
-"admin.status.requesting" = "Admin requested";
-"admin.status.unavailable" = "Admin unavailable";
 "category.launchServices" = "Launch Services";
 "category.logs" = "Logs";
 "category.network" = "Network";

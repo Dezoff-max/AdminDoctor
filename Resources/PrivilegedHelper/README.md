@@ -37,7 +37,8 @@ Privileged cleanup is intentionally narrow:
 - only paths found by the current allow-listed system cleanup scan are eligible
 - symbolic links and paths outside the allow-list are rejected
 - dry-run planning is available before action
-- quarantine moves go to `/Users/Shared/AdminDoctor/PrivilegedCleanup`
+- quarantine moves go to the root-only `/Library/Application Support/AdminDoctor/Quarantine`; restoring an item needs an administrator
+- XPC clients must be the AdminDoctor app signed by the same team as the helper; an unsigned or ad-hoc signed helper refuses every connection
 - JSONL audit events are written to `/Library/Logs/AdminDoctor/privileged-helper-audit.jsonl`
 - irreversible deletion is not implemented
 

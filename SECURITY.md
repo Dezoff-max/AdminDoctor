@@ -40,9 +40,7 @@ Safe cleanup utilities must:
 
 ## Administrator Authorization
 
-AdminDoctor requests administrator authorization at launch through macOS Authorization Services. The app stores the resulting authorization reference only in memory for the current app session.
-
-This does not make the SwiftUI process run as root. Privileged operations must use explicit, reviewed code paths and must stay reversible or read-only unless a release has a signed, notarized helper and a documented action audit trail.
+AdminDoctor does not request an administrator password at launch and does not hold an authorization reference. The SwiftUI process never runs as root. Privileged operations must use explicit, reviewed code paths and must stay reversible or read-only unless a release has a signed, notarized helper and a documented action audit trail.
 
 The bundled `AdminDoctorPrivilegedHelper` includes a launchd plist, `SMAppService` registration flow, and XPC status, dry-run, and quarantine methods. Production helper approval requires a valid Apple code-signing identity and a correctly signed app/helper pair.
 
@@ -51,7 +49,8 @@ Privileged cleanup must:
 - accept only paths found by the current allow-listed system cleanup scan
 - reject symbolic links and paths outside the allow-list
 - perform dry-run planning before action
-- move eligible items to `/Users/Shared/AdminDoctor/PrivilegedCleanup`
+- move eligible items to `/Library/Application Support/AdminDoctor/Quarantine`, which is created with owner-only permissions and rejected if it is a symbolic link, owned by another user, or writable by other users
+- accept XPC connections only from the AdminDoctor app signed by the same team as the helper, and refuse all connections when the helper has no team signature
 - write JSONL audit events to `/Library/Logs/AdminDoctor/privileged-helper-audit.jsonl`
 - avoid irreversible deletion commands
 

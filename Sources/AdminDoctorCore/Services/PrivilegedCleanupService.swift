@@ -1,6 +1,25 @@
 import Foundation
 
+public enum PrivilegedCleanupError: Error, Equatable, LocalizedError {
+    case unsafeQuarantineDirectory(String, String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .unsafeQuarantineDirectory(let path, let reason):
+            return "Quarantine directory \(path) is not trusted: \(reason)."
+        }
+    }
+}
+
 public final class PrivilegedCleanupService: @unchecked Sendable {
+    /// Quarantine lives under /Library so that only root can create or replace it.
+    /// A user-writable location such as /Users/Shared would let any local user plant
+    /// a symbolic link and redirect files moved by the root helper.
+    public static let defaultQuarantineBase = URL(
+        fileURLWithPath: "/Library/Application Support/AdminDoctor/Quarantine",
+        isDirectory: true
+    )
+
     private let fileManager: FileManager
     private let scopes: [CleanupScope]
     private let quarantineBase: URL
@@ -10,7 +29,7 @@ public final class PrivilegedCleanupService: @unchecked Sendable {
     public init(
         fileManager: FileManager = .default,
         scopes: [CleanupScope] = DiskCleanupService.systemCleanupScopes(),
-        quarantineBase: URL = URL(fileURLWithPath: "/Users/Shared/AdminDoctor/PrivilegedCleanup", isDirectory: true),
+        quarantineBase: URL = PrivilegedCleanupService.defaultQuarantineBase,
         auditLogURL: URL = URL(fileURLWithPath: "/Library/Logs/AdminDoctor/privileged-helper-audit.jsonl"),
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
@@ -50,7 +69,7 @@ public final class PrivilegedCleanupService: @unchecked Sendable {
         let quarantineRoot = sessionQuarantineRoot(for: executedAt)
 
         do {
-            try fileManager.createDirectory(at: quarantineRoot, withIntermediateDirectories: true)
+            try prepareQuarantineRoot(quarantineRoot)
         } catch {
             let failure = CleanupFailure(path: quarantineRoot.path, message: "Could not create quarantine directory: \(error.localizedDescription)")
             failures.append(failure)
@@ -157,6 +176,41 @@ public final class PrivilegedCleanupService: @unchecked Sendable {
             return false
         }
         return values.isSymbolicLink == true
+    }
+
+    private func prepareQuarantineRoot(_ quarantineRoot: URL) throws {
+        let ownerOnly: [FileAttributeKey: Any] = [.posixPermissions: 0o700]
+        let container = quarantineBase.deletingLastPathComponent()
+
+        try fileManager.createDirectory(at: quarantineBase, withIntermediateDirectories: true, attributes: ownerOnly)
+        try validateQuarantineDirectory(container)
+        try validateQuarantineDirectory(quarantineBase)
+        try fileManager.setAttributes(ownerOnly, ofItemAtPath: quarantineBase.path)
+
+        if !fileManager.fileExists(atPath: quarantineRoot.path) {
+            try fileManager.createDirectory(at: quarantineRoot, withIntermediateDirectories: false, attributes: ownerOnly)
+        }
+        try validateQuarantineDirectory(quarantineRoot)
+    }
+
+    /// Refuses quarantine directories that another user could have planted or can modify.
+    private func validateQuarantineDirectory(_ url: URL) throws {
+        // attributesOfItem does not follow a trailing symbolic link.
+        let attributes = try fileManager.attributesOfItem(atPath: url.path)
+
+        guard attributes[.type] as? FileAttributeType == .typeDirectory else {
+            throw PrivilegedCleanupError.unsafeQuarantineDirectory(url.path, "it is not a real directory")
+        }
+
+        let owner = (attributes[.ownerAccountID] as? NSNumber)?.uint32Value
+        guard owner == geteuid() else {
+            throw PrivilegedCleanupError.unsafeQuarantineDirectory(url.path, "it is owned by another user")
+        }
+
+        let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue ?? 0o777
+        guard permissions & 0o022 == 0 else {
+            throw PrivilegedCleanupError.unsafeQuarantineDirectory(url.path, "it is writable by other users")
+        }
     }
 
     private func sessionQuarantineRoot(for date: Date) -> URL {

@@ -44,9 +44,7 @@ AdminDoctor is a privacy-first macOS diagnostics app for system administrators, 
 
 ## v0.1.2 - Admin Authorization And Network Cache
 
-- [x] Request administrator authorization at app launch through macOS Authorization Services.
-- [x] Keep authorization state in memory for the current app session.
-- [x] Show admin authorization status in the dashboard header.
+- [x] Request administrator authorization at app launch through macOS Authorization Services (removed later: the authorization was never used).
 - [x] Add a Network button to clear the local DNS cache.
 - [x] Group storage cleanup candidates by source.
 - [x] Add cleanup risk labels: safe, caution, manual review, helper required.

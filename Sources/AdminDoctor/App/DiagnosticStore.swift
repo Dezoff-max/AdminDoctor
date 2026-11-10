@@ -19,7 +19,6 @@ final class DiagnosticStore: ObservableObject {
     @Published private(set) var networkProbeSummary: NetworkProbeSummary?
     @Published private(set) var privilegedHelperStatus: PrivilegedHelperStatus
     @Published private(set) var privilegedCleanupPlan: PrivilegedCleanupPlan?
-    @Published private(set) var adminPrivilegeState: AdminPrivilegeState = .notRequested
     @Published private(set) var scanHistory: [ScanHistoryEntry] = []
     @Published var selectedCleanupIDs: Set<UUID> = []
     @Published var exportError: String?
@@ -41,8 +40,6 @@ final class DiagnosticStore: ObservableObject {
     private let networkToolkitService: NetworkToolkitService
     private let privilegedHelperStatusService: PrivilegedHelperStatusService
     private let privilegedHelperController: PrivilegedHelperController
-    private let adminPrivilegeManager: AdminPrivilegeManager
-    private var didRequestLaunchPrivileges = false
     private let scanHistoryLimit = 20
     private let scanHistoryDefaultsKey = "scanHistory"
 
@@ -53,8 +50,7 @@ final class DiagnosticStore: ObservableObject {
         localNetworkScanner: LocalNetworkScanner? = nil,
         networkToolkitService: NetworkToolkitService? = nil,
         privilegedHelperStatusService: PrivilegedHelperStatusService? = nil,
-        privilegedHelperController: PrivilegedHelperController = PrivilegedHelperController(),
-        adminPrivilegeManager: AdminPrivilegeManager = AdminPrivilegeManager()
+        privilegedHelperController: PrivilegedHelperController = PrivilegedHelperController()
     ) {
         self.runner = runner
         self.suite = DiagnosticSuite.default(runner: runner)
@@ -65,7 +61,6 @@ final class DiagnosticStore: ObservableObject {
         let helperStatusService = privilegedHelperStatusService ?? PrivilegedHelperStatusService(runner: runner)
         self.privilegedHelperStatusService = helperStatusService
         self.privilegedHelperController = privilegedHelperController
-        self.adminPrivilegeManager = adminPrivilegeManager
         self.scanHistory = Self.loadScanHistory(key: scanHistoryDefaultsKey)
         self.privilegedHelperStatus = helperStatusService.status(bundledToolPath: Self.bundledPrivilegedHelperPath())
             .withRuntimeStatus(serviceManagementStatus: privilegedHelperController.serviceStatusTitle(), xpcVersion: nil)
@@ -97,26 +92,6 @@ final class DiagnosticStore: ObservableObject {
         lastRunDate = finishedAt
         recordScanHistory(startedAt: finishedAt, results: sortedResults)
         isRunning = false
-    }
-
-    func requestAdminPrivilegesAtLaunch() async {
-        guard !didRequestLaunchPrivileges else {
-            return
-        }
-
-        didRequestLaunchPrivileges = true
-        adminPrivilegeState = AdminPrivilegeState(
-            status: .requesting,
-            requestedAt: Date(),
-            message: L10n.string("admin.message.requesting")
-        )
-
-        let manager = adminPrivilegeManager
-        let state = await Task.detached(priority: .userInitiated) {
-            manager.requestAdminRights()
-        }.value
-
-        adminPrivilegeState = state
     }
 
     func results(for category: DiagnosticCategory) -> [DiagnosticResult] {

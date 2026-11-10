@@ -1,15 +1,3 @@
-"admin.message.authorized" = "Права администратора разрешены для текущего сеанса приложения.";
-"admin.message.canceled" = "Авторизация администратора отменена.";
-"admin.message.denied" = "Авторизация администратора отклонена.";
-"admin.message.notRequested" = "Права администратора еще не запрашивались.";
-"admin.message.requesting" = "Запрашиваются права администратора...";
-"admin.message.unavailable" = "Авторизация администратора недоступна.";
-"admin.status.authorized" = "Админ разрешен";
-"admin.status.canceled" = "Админ отменен";
-"admin.status.denied" = "Админ отклонен";
-"admin.status.notRequested" = "Админ не запрошен";
-"admin.status.requesting" = "Админ запрошен";
-"admin.status.unavailable" = "Админ недоступен";
 "category.launchServices" = "Launch Services";
 "category.logs" = "Журналы";
 "category.network" = "Сеть";

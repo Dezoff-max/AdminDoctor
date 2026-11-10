@@ -102,4 +102,37 @@ final class NetworkToolkitServiceTests: XCTestCase {
             "1 of 2 configured proxy endpoint(s) reachable."
         )
     }
+
+    func testRejectsHostsThatWouldBeParsedAsOptions() {
+        let runner = NetworkToolkitRecordingRunner()
+        let service = NetworkToolkitService(runner: runner)
+
+        for host in ["-f", "-c1000", " -S", "--help"] {
+            XCTAssertThrowsError(try service.ping(host: host)) { error in
+                XCTAssertEqual(error as? NetworkToolkitError, .invalidHost)
+            }
+            XCTAssertThrowsError(try service.traceroute(host: host))
+            XCTAssertThrowsError(try service.dnsLookup(host: host))
+        }
+
+        XCTAssertTrue(runner.commands.isEmpty)
+    }
+
+    func testAcceptsOrdinaryHostNames() throws {
+        let runner = NetworkToolkitRecordingRunner()
+        let service = NetworkToolkitService(runner: runner)
+
+        _ = try service.ping(host: "my-host.example.com")
+
+        XCTAssertEqual(runner.commands.first?.arguments.last, "my-host.example.com")
+    }
+}
+
+private final class NetworkToolkitRecordingRunner: CommandRunning, @unchecked Sendable {
+    private(set) var commands: [Command] = []
+
+    func run(_ command: Command) throws -> CommandResult {
+        commands.append(command)
+        return CommandResult(stdout: "")
+    }
 }

@@ -91,16 +91,6 @@ extension CleanupRisk {
     }
 }
 
-extension AdminPrivilegeStatus {
-    var localizedTitle: String {
-        L10n.string("admin.status.\(rawValue)")
-    }
-
-    var localizedMessage: String {
-        L10n.string("admin.message.\(rawValue)")
-    }
-}
-
 func localizedCleanupReason(_ reason: String) -> String {
     switch reason {
     case "User cache item":
