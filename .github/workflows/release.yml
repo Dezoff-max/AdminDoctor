@@ -2,6 +2,11 @@ name: Signed Release
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create and publish, for example v0.1.11. Leave empty to only build the DMG."
+        required: false
+        type: string
   push:
     tags:
       - "v*"
@@ -17,6 +22,27 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tag
+        id: release
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          TAG=""
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            TAG="$GITHUB_REF_NAME"
+          elif [[ -n "${INPUT_TAG:-}" ]]; then
+            TAG="$INPUT_TAG"
+          fi
+          if [[ -n "$TAG" && ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag must look like v1.2.3, got: $TAG" >&2
+            exit 2
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Check signing secrets
         id: signing
@@ -37,7 +63,7 @@ jobs:
                 -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" ]]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::Signing or notarization secrets are not configured; skipping signed release artifact."
+            echo "::notice::Signing or notarization secrets are not configured; building an unsigned DMG."
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -69,13 +95,11 @@ jobs:
         env:
           CODE_SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_APPLICATION }}
           CODE_SIGN_TIMESTAMP_ARG: "--timestamp"
+          BUILD_CONFIGURATION: release
+          APP_VERSION: ${{ steps.release.outputs.version }}
           APP_BUILD: ${{ github.run_number }}
         run: |
           set -euo pipefail
-          # The checkout is shallow, so take the version from the pushed tag.
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            export APP_VERSION="${GITHUB_REF_NAME#v}"
-          fi
           if [[ -z "${CODE_SIGN_IDENTITY:-}" ]]; then
             echo "Missing DEVELOPER_ID_APPLICATION secret." >&2
             exit 2
@@ -92,19 +116,67 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: ./script/notarize_dmg.sh dist/AdminDoctor.dmg
 
-      - name: Upload workflow artifact
-        if: steps.signing.outputs.available == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: AdminDoctor-signed-dmg
-          path: dist/AdminDoctor.dmg
-
-      - name: Publish GitHub release asset
-        if: github.ref_type == 'tag' && steps.signing.outputs.available == 'true'
+      - name: Build unsigned DMG
+        if: steps.signing.outputs.available != 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          BUILD_CONFIGURATION: release
+          APP_VERSION: ${{ steps.release.outputs.version }}
+          APP_BUILD: ${{ github.run_number }}
+        run: ./script/build_dmg.sh
+
+      - name: Verify DMG
         run: |
           set -euo pipefail
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" --title "AdminDoctor $GITHUB_REF_NAME" --notes "Signed and notarized AdminDoctor release."
-          gh release upload "$GITHUB_REF_NAME" dist/AdminDoctor.dmg --clobber
+          MOUNT_POINT="$RUNNER_TEMP/admindoctor-dmg"
+          hdiutil attach dist/AdminDoctor.dmg -nobrowse -readonly -mountpoint "$MOUNT_POINT"
+          trap 'hdiutil detach "$MOUNT_POINT" >/dev/null' EXIT
+          APP="$MOUNT_POINT/AdminDoctor.app"
+          test -x "$APP/Contents/MacOS/AdminDoctor"
+          test -f "$APP/Contents/Resources/AdminDoctor_AdminDoctorCore.bundle/oui.csv"
+          test -L "$MOUNT_POINT/Applications"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist"
+          lipo -archs "$APP/Contents/MacOS/AdminDoctor"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdminDoctor-dmg
+          path: dist/AdminDoctor.dmg
+
+      - name: Publish GitHub release
+        if: steps.release.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          SIGNED: ${{ steps.signing.outputs.available }}
+        run: |
+          set -euo pipefail
+          NOTES="$RUNNER_TEMP/release-notes.md"
+          if [[ -f "Docs/ReleaseNotes/$TAG.md" ]]; then
+            cp "Docs/ReleaseNotes/$TAG.md" "$NOTES"
+          else
+            echo "## AdminDoctor $TAG" > "$NOTES"
+          fi
+
+          ARCHS="$(lipo -archs dist/AdminDoctor.app/Contents/MacOS/AdminDoctor)"
+          SHA256="$(shasum -a 256 dist/AdminDoctor.dmg | awk '{print $1}')"
+          {
+            echo
+            echo "Build:"
+            if [[ "$SIGNED" == "true" ]]; then
+              echo "- Signed with Developer ID and notarized by GitHub Actions."
+            else
+              echo "- Unsigned build from GitHub Actions: no Developer ID secrets are configured. macOS will ask for confirmation on first launch; see the installation notes in the README."
+            fi
+            echo "- Architectures: $ARCHS"
+            echo "- SHA-256: \`$SHA256  AdminDoctor.dmg\`"
+          } >> "$NOTES"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/AdminDoctor.dmg --clobber
+          else
+            gh release create "$TAG" dist/AdminDoctor.dmg \
+              --target "$GITHUB_SHA" \
+              --title "AdminDoctor $TAG" \
+              --notes-file "$NOTES"
+          fi

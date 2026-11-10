@@ -116,6 +116,19 @@ AdminDoctor is a privacy-first macOS diagnostics app for system administrators, 
 - [x] Improve HTML report styling and PDF rendering.
 - [x] Add multiple GitHub README screenshots.
 
+## v0.1.11 - Security Hardening And Release Packaging
+
+- [x] Verify the code signature of privileged helper XPC clients.
+- [x] Move privileged cleanup quarantine to a root-only directory under `/Library/Application Support`.
+- [x] Remove the unused administrator password prompt at launch.
+- [x] Reject network toolkit hosts that start with a hyphen.
+- [x] Replace the command deny-list with an explicit executable allow-list.
+- [x] Remove the Gatekeeper-disable advice from installation notes.
+- [x] Add app version, build number, and local network usage description to `Info.plist`.
+- [x] Copy the offline OUI vendor data into the app bundle.
+- [x] Build, verify, and launch the release app bundle and DMG in CI.
+- [x] Publish releases from GitHub Actions, unsigned until signing secrets are configured.
+
 ## v0.2.0 - Admin Toolkit Foundation
 
 - [ ] Add a tools sidebar model separate from diagnostic categories.

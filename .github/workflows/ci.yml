@@ -27,8 +27,10 @@ jobs:
       - name: Test
         run: swift test
 
-      - name: Build app bundle
-        run: ./script/build_and_run.sh --bundle-only
+      - name: Build release app bundle and DMG
+        env:
+          BUILD_CONFIGURATION: release
+        run: ./script/build_dmg.sh
 
       - name: Verify app bundle
         run: |
@@ -47,6 +49,7 @@ jobs:
           [[ -n "$(print_key NSLocalNetworkUsageDescription)" ]]
 
           test -x "$APP/Contents/MacOS/AdminDoctor"
+          test -f "$APP/Contents/Resources/AdminDoctor_AdminDoctorCore.bundle/oui.csv"
           test -x "$APP/Contents/Library/LaunchServices/AdminDoctorPrivilegedHelper"
           plutil -lint "$APP/Contents/Library/LaunchDaemons/dev.admindoctor.AdminDoctorPrivilegedHelper.plist"
           for language in en ru; do
@@ -54,9 +57,22 @@ jobs:
             plutil -lint "$APP/Contents/Resources/$language.lproj/Localizable.strings"
           done
 
+      - name: Verify DMG
+        run: |
+          set -euo pipefail
+          MOUNT_POINT="$RUNNER_TEMP/admindoctor-dmg"
+          hdiutil attach dist/AdminDoctor.dmg -nobrowse -readonly -mountpoint "$MOUNT_POINT"
+          trap 'hdiutil detach "$MOUNT_POINT" >/dev/null' EXIT
+          test -x "$MOUNT_POINT/AdminDoctor.app/Contents/MacOS/AdminDoctor"
+          test -f "$MOUNT_POINT/AdminDoctor.app/Contents/Resources/AdminDoctor_AdminDoctorCore.bundle/oui.csv"
+          test -L "$MOUNT_POINT/Applications"
+
       - name: Launch smoke test
         run: |
           set -euo pipefail
+          # Move the build directory away so the app cannot fall back to build-time
+          # paths: it has to run from what is inside the bundle, as on a user's Mac.
+          mv .build "$RUNNER_TEMP/admindoctor-build"
           open -n dist/AdminDoctor.app
           sleep 10
           if ! pgrep -x AdminDoctor >/dev/null; then
