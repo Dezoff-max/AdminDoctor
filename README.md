@@ -174,6 +174,12 @@ Run as a macOS app bundle:
 ./script/build_and_run.sh
 ```
 
+The bundle version comes from the nearest git tag (`v0.1.10` becomes `0.1.10`) and the build number from the commit count. Override either when needed:
+
+```sh
+APP_VERSION=0.2.0 APP_BUILD=42 ./script/build_and_run.sh --bundle-only
+```
+
 Regenerate icons and build a local DMG:
 
 ```sh

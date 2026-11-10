@@ -26,6 +26,23 @@ LOCALIZATION_ROOT="$ROOT_DIR/Sources/AdminDoctor/Resources"
 
 cd "$ROOT_DIR"
 
+# Marketing version: APP_VERSION, else the nearest git tag (v0.1.10 -> 0.1.10).
+# Build number: APP_BUILD, else the commit count.
+APP_VERSION="${APP_VERSION:-$(git describe --tags --abbrev=0 2>/dev/null || true)}"
+APP_VERSION="${APP_VERSION#v}"
+APP_VERSION="${APP_VERSION:-0.0.0}"
+APP_BUILD="${APP_BUILD:-$(git rev-list --count HEAD 2>/dev/null || true)}"
+APP_BUILD="${APP_BUILD:-1}"
+
+if [[ ! "$APP_VERSION" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
+  echo "APP_VERSION must look like 1.2.3, got: $APP_VERSION" >&2
+  exit 2
+fi
+if [[ ! "$APP_BUILD" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
+  echo "APP_BUILD must look like 42 or 1.2.3, got: $APP_BUILD" >&2
+  exit 2
+fi
+
 mkdir -p "$DIST_DIR"
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 find "$DIST_DIR" -maxdepth 1 -type d -name "$APP_NAME [0-9]*.app" -prune -exec rm -rf {} +
@@ -88,8 +105,14 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$APP_NAME</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$APP_VERSION</string>
+  <key>CFBundleVersion</key>
+  <string>$APP_BUILD</string>
   <key>LSMinimumSystemVersion</key>
   <string>$MIN_SYSTEM_VERSION</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>AdminDoctor scans your local network to list nearby devices and to run the ping, traceroute, and port checks you start. Results stay on this Mac.</string>
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
 </dict>
